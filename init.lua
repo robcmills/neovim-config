@@ -39,6 +39,11 @@ vim.keymap.set("n", "<leader>o", function()
   -- todo
 end, { desc = "Focus File explorer" })
 
+-- telescope
+vim.keymap.set("n", "<leader>f", ":Telescope find_files<cr>", { desc = "Find files" })
+vim.keymap.set("n", "<leader>g", ":Telescope live_grep<cr>", { desc = "Grep" })
+
+
 -- autocommands
 -- :e . to refresh file explorer on file events (create, delete, rename, etc.)
 

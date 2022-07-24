@@ -38,4 +38,20 @@ return require('packer').startup(function()
       require 'configs.bufferline'
     end,
   }
+
+  use {
+    'nvim-lua/plenary.nvim',
+    module = 'plenary',
+  }
+
+  use {
+    'nvim-telescope/telescope.nvim',
+    tag = '0.1.0',
+    requires = { {'nvim-lua/plenary.nvim'} },
+    cmd = "Telescope",
+    module = "telescope",
+    config = function()
+      require "configs.telescope"
+    end,
+  }
 end)
