@@ -1,5 +1,9 @@
 require("plugins")
 
+-- colorscheme
+vim.g.tokyonight_style = 'night'
+vim.cmd[[colorscheme tokyonight]]
+
 -- netrw file explorer
 vim.g.netrw_banner = 0
 vim.g.netrw_liststyle = 3 -- tree style listing
@@ -26,8 +30,15 @@ vim.keymap.set("n", "<leader>q", ":qa<cr>", { desc = "Quit" })
 vim.keymap.set("n", "<leader>w", "<C-w>", { desc = "Easier window nav" })
 vim.keymap.set("n", "<leader>e", ":Lex<cr>", { desc = "Toggle File explorer" })
 
+-- buffer nav
+vim.keymap.set("n", "t", ":bnext<cr>", { desc = "Next buffer" })
+vim.keymap.set("n", "T", ":bprev<cr>", { desc = "Prev buffer" })
+
 vim.keymap.set("n", "<leader>o", function()
   print("test")
   -- todo
 end, { desc = "Focus File explorer" })
+
+-- autocommands
+-- :e . to refresh file explorer on file events (create, delete, rename, etc.)
 

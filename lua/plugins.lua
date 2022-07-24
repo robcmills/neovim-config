@@ -27,4 +27,15 @@ return require('packer').startup(function()
       require "configs.icons"
     end,
   }
+
+  use 'folke/tokyonight.nvim'
+
+  use {
+    'akinsho/bufferline.nvim',
+    tag = 'v2.*',
+    requires = 'kyazdani42/nvim-web-devicons',
+    config = function()
+      require 'configs.bufferline'
+    end,
+  }
 end)

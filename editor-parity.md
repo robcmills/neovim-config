@@ -1,3 +1,11 @@
+### neovim from scratch
+
+- [ ] <leader>h remove highlight
+- [ ] netrw
+  + [ ] auto refresh
+  + [ ] follow current buffer
+  + [ ] key mapping to focus file explorer
+
 ### neovim
 
 - [x] <Tab> to exit insert mode
