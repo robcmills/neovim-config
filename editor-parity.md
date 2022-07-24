@@ -5,6 +5,7 @@
   + [ ] auto refresh
   + [ ] follow current buffer
   + [ ] key mapping to focus file explorer
+- [ ] bufferline - text_align = left
 
 ### neovim
 
