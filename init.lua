@@ -2,7 +2,7 @@ require("plugins")
 
 -- colorscheme
 vim.g.tokyonight_style = 'night'
-vim.cmd[[colorscheme tokyonight]]
+vim.cmd [[colorscheme tokyonight]]
 
 -- netrw file explorer
 vim.g.netrw_banner = 0
@@ -15,9 +15,12 @@ vim.g.netrw_winsize = 25
 -- opt
 vim.opt.cursorline = true
 vim.opt.fillchars = { eob = " " } -- Disable `~` on nonexistent lines
+vim.opt.ignorecase = true -- case insensitive search
 
 -- key bindings
 vim.g.mapleader = " "
+vim.keymap.set("", "<Space>", "<Nop>") -- disable space because leader
+
 vim.keymap.set("i", "<Tab>", "<Esc>")
 vim.keymap.set("n", "J", "<C-d>", { desc = "Page down" })
 vim.keymap.set("n", "K", "<C-u>", { desc = "Page up" })
@@ -35,15 +38,16 @@ vim.keymap.set("n", "t", ":bnext<cr>", { desc = "Next buffer" })
 vim.keymap.set("n", "T", ":bprev<cr>", { desc = "Prev buffer" })
 
 vim.keymap.set("n", "<leader>o", function()
-  print("test")
-  -- todo
+  --  print(vim.inspect(vim.))
 end, { desc = "Focus File explorer" })
 
 -- telescope
 vim.keymap.set("n", "<leader>f", ":Telescope find_files<cr>", { desc = "Find files" })
 vim.keymap.set("n", "<leader>g", ":Telescope live_grep<cr>", { desc = "Grep" })
 
+-- lsp
+-- see lua/configs/lsp.lua
+
 
 -- autocommands
 -- :e . to refresh file explorer on file events (create, delete, rename, etc.)
-

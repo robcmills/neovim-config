@@ -54,4 +54,20 @@ return require('packer').startup(function()
       require "configs.telescope"
     end,
   }
+
+  -- Built-in LSP
+  use {
+    'neovim/nvim-lspconfig',
+    event = 'VimEnter',
+  }
+
+  -- LSP manager
+  use {
+    "williamboman/nvim-lsp-installer",
+    after = "nvim-lspconfig",
+    config = function()
+      require "configs.nvim-lsp-installer"
+      require "configs.lsp"
+    end,
+  }
 end)
