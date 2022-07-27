@@ -1,6 +1,8 @@
 return require('packer').startup(function()
   use 'wbthomason/packer.nvim'
 
+  use 'folke/tokyonight.nvim'
+
   use {
     'nvim-treesitter/nvim-treesitter',
     run = ':TSUpdate',
@@ -22,13 +24,20 @@ return require('packer').startup(function()
 
   use {
     'kyazdani42/nvim-web-devicons',
-    event = "VimEnter",
     config = function()
       require "configs.icons"
     end,
   }
 
-  use 'folke/tokyonight.nvim'
+  use {
+    'kyazdani42/nvim-tree.lua',
+    requires = {
+      'kyazdani42/nvim-web-devicons',
+    },
+    config = function()
+      require "configs.nvim-tree"
+    end,
+  }
 
   use {
     'akinsho/bufferline.nvim',
@@ -47,7 +56,7 @@ return require('packer').startup(function()
   use {
     'nvim-telescope/telescope.nvim',
     tag = '0.1.0',
-    requires = { {'nvim-lua/plenary.nvim'} },
+    requires = { { 'nvim-lua/plenary.nvim' } },
     cmd = "Telescope",
     module = "telescope",
     config = function()

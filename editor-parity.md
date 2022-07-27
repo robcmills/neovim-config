@@ -6,6 +6,8 @@
   + [ ] follow current buffer
   + [ ] key mapping to focus file explorer
 - [ ] bufferline - text_align = left
+- [ ] nvim-tree
+  + [ ] add mapping to toggle "wide" and "narrow"
 
 ### neovim
 

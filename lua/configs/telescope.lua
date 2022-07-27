@@ -16,8 +16,12 @@ require 'telescope'.setup({
       height = 0.9,
       preview_cutoff = 120,
     },
---    file_ignore_patterns = '',
+    --    file_ignore_patterns = '',
   },
-  pickers = {},
+  pickers = {
+    lsp_references = {
+      show_line = false
+    },
+  },
   extensions = {},
 })

@@ -25,9 +25,11 @@ local on_attach = function(_, bufnr)
   map("n", "gd", function()
     vim.lsp.buf.definition()
   end, { desc = "Show the definition of current symbol", buffer = bufnr })
+
   map("n", "gr", function()
     vim.lsp.buf.references()
   end, { desc = "References of current symbol", buffer = bufnr })
+
   map("n", "[d", function()
     vim.diagnostic.goto_prev()
   end, { desc = "Previous diagnostic", buffer = bufnr })
@@ -43,6 +45,9 @@ local on_attach = function(_, bufnr)
   end, { desc = "Format file with LSP" })
 end
 
+-- setup servers
+require 'lspconfig'.eslint.setup {}
+
 require 'lspconfig'.sumneko_lua.setup {
   on_attach = function(client, bufnr)
     --    client.resolved_capabilities.document_formatting = false
@@ -52,8 +57,7 @@ require 'lspconfig'.sumneko_lua.setup {
         tabSize = 2,
         insertSpaces = true,
       }
-    end, { desc = "Format code", buffer = bufnr })
-
+    end, { desc = "Format lua code", buffer = bufnr })
   end,
   settings = {
     Lua = {
@@ -64,6 +68,14 @@ require 'lspconfig'.sumneko_lua.setup {
   },
 }
 
+require 'lspconfig'.tsserver.setup {
+  on_attach = function(client, bufnr)
+    on_attach(client, bufnr)
+  end,
+}
+
+
+-- diagnostics
 local signs = {
   { name = "DiagnosticSignError", text = "" },
   { name = "DiagnosticSignWarn", text = "" },
@@ -91,9 +103,3 @@ vim.diagnostic.config {
 
 vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
 vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = "rounded" })
-
-
--- testing go to def
-local f = function() print 'test' end
-
-f()
