@@ -45,6 +45,7 @@ vim.keymap.set("n", "s", "<cmd>wa<cr>", { desc = "Save" })
 vim.keymap.set("n", "<leader>yf", ":let @+ = expand('%')<cr>", { desc = "Copy current buffer filepath" })
 vim.keymap.set("n", "<leader>C", ":%bd<cr>", { desc = "Close all buffers" })
 vim.keymap.set("n", "<leader>q", ":qa<cr>", { desc = "Quit" })
+vim.keymap.set("n", "<leader>h", "<cmd>nohlsearch<cr>", { desc = "No Highlight" })
 
 -- window nav
 vim.keymap.set("n", "<leader>w", "<C-w>", { desc = "Easier window nav" })
@@ -54,6 +55,7 @@ vim.keymap.set("n", "<leader>e", ":Lex<cr>", { desc = "Toggle File explorer" })
 vim.keymap.set("n", "t", ":bnext<cr>", { desc = "Next buffer" })
 vim.keymap.set("n", "T", ":bprev<cr>", { desc = "Prev buffer" })
 vim.keymap.set("n", "<leader>c", "<cmd>bdelete<cr>", { desc = "Close buffer" })
+vim.keymap.set("n", "<leader>C", ":%bd<cr>", { desc = "Close all buffers" })
 
 -- telescope
 vim.keymap.set("n", "<leader>f", ":Telescope find_files<cr>", { desc = "Find files" })
@@ -64,9 +66,13 @@ end, { desc = "Search references" })
 vim.keymap.set("n", "<leader>d", function()
   require("telescope.builtin").diagnostics()
 end, { desc = "Search diagnostics" })
+vim.keymap.set("n", "<leader>b", function()
+  require("telescope.builtin").buffers()
+end, { desc = "Search buffers" })
 
 -- nvim-tree
 vim.keymap.set("n", "<leader>e", ":NvimTreeFocus<cr>", { desc = "Focus file tree" })
+vim.keymap.set("n", "<leader>E", ":NvimTreeToggle<cr>", { desc = "Toggle file tree" })
 
 -- toggle comment
 vim.keymap.set("n", "<leader>/", function()
@@ -78,5 +84,9 @@ vim.keymap.set(
   "<esc><cmd>lua require('Comment.api').toggle_linewise_op(vim.fn.visualmode())<cr>",
   { desc = "Toggle comment line" }
 )
+
+-- eslint
+vim.keymap.set("n", "<leader>a", ":EslintFixAll<cr>", { desc = "EslintFixAll" })
+
 
 -- lsp see lua/configs/lsp.lua
