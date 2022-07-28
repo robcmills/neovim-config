@@ -24,12 +24,20 @@ vim.opt.fillchars = {
 vim.opt.ignorecase = true -- case insensitive search
 vim.opt.number = true -- show line numbers
 vim.opt.clipboard = "unnamedplus" -- yank to system clipboard
+-- wrap text and don't break words
+vim.opt.wrap = true
+vim.opt.linebreak = true
+-- indent
+vim.opt.shiftwidth = 2 -- Number of space inserted for indentation
+vim.opt.copyindent = true -- Copy the previous indentation on autoindenting
+vim.opt.preserveindent = true -- Preserve indent structure as much as possible
 
 -- key bindings
 vim.g.mapleader = " "
 vim.keymap.set("", "<Space>", "<Nop>") -- disable space because leader
 
 vim.keymap.set("i", "<Tab>", "<Esc>")
+vim.keymap.set("n", "U", "<C-r>", { desc = "Redo" })
 vim.keymap.set("n", "J", "<C-d>", { desc = "Page down" })
 vim.keymap.set("n", "K", "<C-u>", { desc = "Page up" })
 vim.keymap.set("n", "s", "<cmd>wa<cr>", { desc = "Save" })
@@ -58,5 +66,16 @@ end, { desc = "Search diagnostics" })
 
 -- nvim-tree
 vim.keymap.set("n", "<leader>e", ":NvimTreeFocus<cr>", { desc = "Focus file tree" })
+
+-- toggle comment
+vim.keymap.set("n", "<leader>/", function()
+  require("Comment.api").toggle_current_linewise()
+end, { desc = "Comment line" })
+vim.keymap.set(
+  "v",
+  "<leader>/",
+  "<esc><cmd>lua require('Comment.api').toggle_linewise_op(vim.fn.visualmode())<cr>",
+  { desc = "Toggle comment line" }
+)
 
 -- lsp see lua/configs/lsp.lua

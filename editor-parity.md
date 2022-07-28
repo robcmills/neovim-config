@@ -8,6 +8,7 @@
 - [ ] bufferline - text_align = left
 - [ ] nvim-tree
   + [ ] add mapping to toggle "wide" and "narrow"
+- [ ] add English dictionary spell checking
 
 ### neovim
 

@@ -48,6 +48,12 @@ end
 -- setup servers
 require 'lspconfig'.eslint.setup {}
 
+require 'lspconfig'.jsonls.setup {
+  on_attach = function(client, bufnr)
+    on_attach(client, bufnr)
+  end,
+}
+
 require 'lspconfig'.sumneko_lua.setup {
   on_attach = function(client, bufnr)
     --    client.resolved_capabilities.document_formatting = false
