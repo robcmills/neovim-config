@@ -2,6 +2,7 @@ return require('packer').startup {
   function(use)
     use 'wbthomason/packer.nvim'
 
+    -- colorscheme
     use 'folke/tokyonight.nvim'
 
     use {
@@ -30,6 +31,7 @@ return require('packer').startup {
       end,
     }
 
+    -- File Tree
     use {
       'kyazdani42/nvim-tree.lua',
       requires = {
@@ -54,6 +56,7 @@ return require('packer').startup {
       module = 'plenary',
     }
 
+    -- Telescope
     use {
       'nvim-telescope/telescope.nvim',
       tag = '0.1.0',
@@ -81,6 +84,7 @@ return require('packer').startup {
       end,
     }
 
+    -- Comment
     use {
       'numToStr/Comment.nvim',
       config = function()
