@@ -12,4 +12,9 @@ require 'nvim-tree'.setup {
     centralize_selection = true,
     side = 'left',
   },
+  actions = {
+    open_file = {
+      -- quit_on_open = true,
+    },
+  },
 }

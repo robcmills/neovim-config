@@ -45,16 +45,25 @@ local on_attach = function(_, bufnr)
   end, { desc = "Format file with LSP" })
 end
 
--- setup servers
-require 'lspconfig'.eslint.setup {}
-
-require 'lspconfig'.jsonls.setup {
-  on_attach = function(client, bufnr)
-    on_attach(client, bufnr)
-  end,
+local lsp_defaults = {
+  capabilities = require 'cmp_nvim_lsp'.update_capabilities(vim.lsp.protocol.make_client_capabilities()),
+  on_attach = on_attach,
 }
 
-require 'lspconfig'.sumneko_lua.setup {
+local lspconfig = require 'lspconfig'
+
+lspconfig.util.default_config = vim.tbl_deep_extend(
+  'force',
+  lspconfig.util.default_config,
+  lsp_defaults
+)
+
+-- setup servers
+lspconfig.eslint.setup {}
+
+lspconfig.jsonls.setup {}
+
+lspconfig.sumneko_lua.setup {
   on_attach = function(client, bufnr)
     --    client.resolved_capabilities.document_formatting = false
     on_attach(client, bufnr)
@@ -74,11 +83,7 @@ require 'lspconfig'.sumneko_lua.setup {
   },
 }
 
-require 'lspconfig'.tsserver.setup {
-  on_attach = function(client, bufnr)
-    on_attach(client, bufnr)
-  end,
-}
+lspconfig.tsserver.setup {}
 
 
 -- diagnostics

@@ -10,6 +10,7 @@
   + [x] add mapping to toggle "wide" and "narrow"
 - [ ] add English dictionary spell checking
 - [ ] gitlens
+- [ ] multiple cursors
 
 ### neovim
 
