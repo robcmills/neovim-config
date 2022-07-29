@@ -1,14 +1,15 @@
 ### neovim from scratch
 
-- [ ] <leader>h remove highlight
-- [ ] netrw
+- [x] <leader>h remove highlight
+- [x] netrw (switched to nvim-tree)
   + [ ] auto refresh
   + [ ] follow current buffer
   + [ ] key mapping to focus file explorer
-- [ ] bufferline - text_align = left
-- [ ] nvim-tree
-  + [ ] add mapping to toggle "wide" and "narrow"
+- [x] bufferline - text_align = left
+- [x] nvim-tree
+  + [x] add mapping to toggle "wide" and "narrow"
 - [ ] add English dictionary spell checking
+- [ ] gitlens
 
 ### neovim
 
@@ -17,18 +18,18 @@
   + J page down
   + K page up
 - [x] single key tab/buffer navigation
-  + `H` goes to prev
-  + `L` goes to next
+  + `T` goes to prev
+  + `t` goes to next
   + [ ] can navigate to tab by ordinal number, e.g. <Ctrl-1> goes to first tab
-- [ ] close all tabs key mapping
+- [x] close all tabs key mapping
   + <leader>C
 - yank line, put line should insert row below
   + yy then p
 - [x] join lines
   + gJ
-- toggle commented code
+- [x] toggle commented code
   + <leader>/ require("Comment.api").toggle_current_linewise()
-- hover (show TypeScript type / diagnostics)
+- [x] hover (show TypeScript type / diagnostics)
   + <leader>k vim.lsp.buf.hover()
 - auto absolute imports (if ambiguous, prompt with a list)
   + <leader>la vim.lsp.buf.code_action()
@@ -36,8 +37,8 @@
   + [d previous diagnostic
   + ]d next diagnostic
   + [ ] should work across project unopened files
-- close all folders in file tree
-  + z (with neotree focused)
+- [x] close all folders in file tree
+  + W (with nvim-tree focused)
 - git integration
   + [ ] view diffs
   + [ ] navigate next/prev diff hunks
@@ -49,7 +50,9 @@
   + https://vim.fandom.com/wiki/Word_wrap_without_line_breaks
 - [ ] open a new file in the same directory as active buffer
   + <leader>o a (focus neotree then add file/folder)
+  + <leader>e a? (focus nvimtree then add file/folder)
 - [ ] open a new file in a new window
+  + :new ?
 - [x] highlight all occurences of hovered word
   + * to search forward
   + # to search backward
@@ -88,18 +91,18 @@
   + `vim.keymap.set("i", "<C-o>", "<cmd>:lua vim.fn['copilot#Accept']('')<cr>", { desc = "Accept Copilot suggestion" })`
 - [ ] lsp
   + [ ] auto import paths not found for third party libraries
-  + [ ] rename symbol dialog width bug
+  + [x] rename symbol dialog width bug
   + [ ] code actions auto import should prefer absolute paths
   + [ ] goto definition ambiguous resolutions should open dialog to select (not a window)
   + [x] filter lsp diagnostics to not show on third party libraries (node_modules)
     * implemented custom on_attach function to manually stop eslint clients that exist in a node_modules workspace
 
 - [ ] bufferline tabs should show full filename
-- [ ] dynamic width tabs (bufferline)
+- [x] dynamic width tabs (bufferline)
 - [x] show vim mode in text in status bar
-- [ ] TS and eslint errors in the sidebar "jiggling" pane width
+- [x] TS and eslint errors in the sidebar "jiggling" pane width
   + Need to set width of gutter as a constant
-- [ ] adjust color theme to make comments slightly brighter
+- [x] adjust color theme to make comments slightly brighter
 - [ ] telescope
   + [ ] how to scope a live grep
   + [ ] find_files

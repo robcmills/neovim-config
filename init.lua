@@ -25,6 +25,7 @@ vim.opt.ignorecase = true -- case insensitive search
 vim.opt.number = true -- show line numbers
 vim.opt.clipboard = "unnamedplus" -- yank to system clipboard
 vim.opt.signcolumn = 'yes:1'
+
 -- wrap text and don't break words
 vim.opt.wrap = true
 vim.opt.linebreak = true
