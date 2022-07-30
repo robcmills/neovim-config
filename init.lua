@@ -1,11 +1,5 @@
-require("plugins")
-
--- colorscheme
-local colors = require "tokyonight.colors".setup {}
--- print(vim.inspect(colors))
-vim.g.tokyonight_style = 'night'
-vim.cmd [[colorscheme tokyonight]]
-vim.cmd('highlight VertSplit guibg=' .. colors.black .. ' guifg=White')
+require 'plugins'
+require 'configs.tokyonight'
 
 -- netrw file explorer
 vim.g.netrw_banner = 0

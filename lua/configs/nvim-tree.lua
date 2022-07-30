@@ -5,6 +5,17 @@ require 'nvim-tree'.setup {
   renderer = {
     icons = {
       git_placement = 'signcolumn',
+      glyphs = {
+        git = {
+          unstaged = "u",
+          staged = "s",
+          unmerged = "",
+          renamed = "r",
+          untracked = "+",
+          deleted = "-",
+          ignored = "i",
+        },
+      },
     },
   },
   view = {

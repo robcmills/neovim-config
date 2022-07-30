@@ -107,6 +107,24 @@ return require('packer').startup {
       end
     }
 
+    -- Git integration
+    use {
+      'lewis6991/gitsigns.nvim',
+      event = 'BufEnter',
+      config = function()
+        require 'configs.gitsigns'
+      end,
+    }
+
+    -- Statusline
+    use {
+      'feline-nvim/feline.nvim',
+      after = 'nvim-web-devicons',
+      config = function()
+        require 'configs.feline'
+      end,
+    }
+
   end,
   config = {
     display = {
