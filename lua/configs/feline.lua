@@ -18,12 +18,12 @@ require 'feline'.setup {
     active = {
       {
         { provider = spacer() },
-        { provider = 'git_branch', hl = { fg = colors.purple } },
+        { provider = 'git_branch', hl = { fg = colors.purple }, opts = { truncate_hide = true } },
         { provider = spacer(2) },
-        { provider = { name = 'file_info', opts = { type = 'relative' } } },
+        { provider = { name = 'file_info', opts = { type = 'relative' } }, hl = { fg = colors.fg_dark }, priority = 1 },
       },
       {
-        { provider = lsp_client_names, icon = "   ", hl = { fg = colors.blue } },
+        { provider = lsp_client_names, icon = "   ", hl = { fg = colors.blue }, truncate_hide = true },
         { provider = spacer(2) },
         { provider = 'position' },
         { provider = spacer(2) },

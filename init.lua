@@ -19,6 +19,7 @@ vim.opt.ignorecase = true -- case insensitive search
 vim.opt.number = true -- show line numbers
 vim.opt.clipboard = "unnamedplus" -- yank to system clipboard
 vim.opt.signcolumn = 'yes:1'
+vim.opt.laststatus = 3 -- makes status line span full screen
 
 -- wrap text and don't break words
 vim.opt.wrap = true
