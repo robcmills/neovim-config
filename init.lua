@@ -39,7 +39,6 @@ vim.keymap.set("n", "J", "<C-d>", { desc = "Page down" })
 vim.keymap.set("n", "K", "<C-u>", { desc = "Page up" })
 vim.keymap.set("n", "s", "<cmd>wa<cr>", { desc = "Save" })
 vim.keymap.set("n", "<leader>yf", ":let @+ = expand('%')<cr>", { desc = "Copy current buffer filepath" })
-vim.keymap.set("n", "<leader>C", ":%bd<cr>", { desc = "Close all buffers" })
 vim.keymap.set("n", "<leader>q", ":qa<cr>", { desc = "Quit" })
 vim.keymap.set("n", "<leader>h", "<cmd>nohlsearch<cr>", { desc = "No Highlight" })
 
@@ -50,8 +49,14 @@ vim.keymap.set("n", "<leader>e", ":Lex<cr>", { desc = "Toggle File explorer" })
 -- buffer nav
 vim.keymap.set("n", "t", ":bnext<cr>", { desc = "Next buffer" })
 vim.keymap.set("n", "T", ":bprev<cr>", { desc = "Prev buffer" })
-vim.keymap.set("n", "<leader>c", "<cmd>bdelete<cr>", { desc = "Close buffer" })
+vim.keymap.set("n", "<leader><", ":BufferLineMovePrev<cr>", { desc = "Move buffer left" })
+vim.keymap.set("n", "<leader>>", ":BufferLineMoveNext<cr>", { desc = "Move buffer right" })
 vim.keymap.set("n", "<leader>C", ":%bd<cr>", { desc = "Close all buffers" })
+vim.keymap.set("n", "<leader>c", function()
+  local bufnr = vim.api.nvim_get_current_buf()
+  vim.cmd('bp')
+  vim.api.nvim_buf_delete(bufnr, { force = true })
+end, { desc = "Close buffer" })
 
 -- telescope
 vim.keymap.set("n", "<leader>f", ":Telescope find_files<cr>", { desc = "Find files" })
@@ -65,6 +70,9 @@ end, { desc = "Search diagnostics" })
 vim.keymap.set("n", "<leader>b", function()
   require("telescope.builtin").buffers()
 end, { desc = "Search buffers" })
+vim.keymap.set("n", "<leader>p", function()
+  require("telescope.builtin").help_tags()
+end, { desc = "Search help" })
 
 -- nvim-tree
 vim.keymap.set("n", "<leader>e", ":NvimTreeFocus<cr>", { desc = "Focus file tree" })

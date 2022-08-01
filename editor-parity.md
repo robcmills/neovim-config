@@ -11,6 +11,7 @@
 - [ ] add English dictionary spell checking
 - [ ] gitlens
 - [ ] multiple cursors
+- [ ] close buffer should go to previous buffer or last open buffer, not focus file tree
 
 ### neovim
 

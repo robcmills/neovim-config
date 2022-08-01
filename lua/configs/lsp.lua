@@ -83,7 +83,27 @@ lspconfig.sumneko_lua.setup {
   },
 }
 
-lspconfig.tsserver.setup {}
+lspconfig.tsserver.setup {
+  cmd = {
+    'typescript-language-server',
+    '--stdio',
+    -- '--log-level', '4',
+    -- '--tsserver-log-file', '/Users/robcmills/.cache/nvim/typescript-language-server.log',
+    -- '--tsserver-log-verbosity', 'verbose',
+  },
+  init_options = {
+    preferences = {
+      importModuleSpecifierPreference = 'non-relative',
+      quotePreference = 'single',
+    },
+  },
+  -- settings = {
+  --   syntaxes = {
+  --     "Packages/TypeScript Syntax/TypeScript.tmLanguage",
+  --     "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage",
+  --   },
+  -- },
+}
 
 
 -- diagnostics
