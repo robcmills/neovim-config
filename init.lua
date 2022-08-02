@@ -75,8 +75,16 @@ vim.keymap.set("n", "<leader>p", function()
 end, { desc = "Search help" })
 
 -- nvim-tree
-vim.keymap.set("n", "<leader>e", ":NvimTreeFocus<cr>", { desc = "Focus file tree" })
-vim.keymap.set("n", "<leader>E", ":NvimTreeToggle<cr>", { desc = "Toggle file tree" })
+vim.keymap.set("n", "<leader>e", function()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local filetype = vim.api.nvim_buf_get_option(bufnr, 'filetype')
+  if filetype == 'NvimTree' then
+    vim.cmd('wincmd l')
+  else
+    vim.cmd('NvimTreeFocus')
+  end
+end, { desc = "Toggle file tree focus" })
+vim.keymap.set("n", "<leader>E", ":NvimTreeToggle<cr>", { desc = "Toggle file tree open" })
 
 -- toggle comment
 vim.keymap.set("n", "<leader>/", function()
