@@ -10,8 +10,9 @@
   + [x] add mapping to toggle "wide" and "narrow"
 - [ ] add English dictionary spell checking
 - [ ] gitlens
+  + :Gitsigns blame_line
 - [ ] multiple cursors
-- [ ] close buffer should go to previous buffer or last open buffer, not focus file tree
+- [x] close buffer should go to previous buffer or last open buffer, not focus file tree
 
 ### neovim
 
@@ -94,7 +95,7 @@
 - [ ] lsp
   + [ ] auto import paths not found for third party libraries
   + [x] rename symbol dialog width bug
-  + [ ] code actions auto import should prefer absolute paths
+  + [x] code actions auto import should prefer absolute paths
   + [ ] goto definition ambiguous resolutions should open dialog to select (not a window)
   + [x] filter lsp diagnostics to not show on third party libraries (node_modules)
     * implemented custom on_attach function to manually stop eslint clients that exist in a node_modules workspace
@@ -113,7 +114,6 @@
     * [ ] should debounce?
   + [ ] lsp references should group same filepaths
 - [ ] fix autoclose tags
-- [ ] swap neotree out in favor of vifm
 
 
 ### tmux
