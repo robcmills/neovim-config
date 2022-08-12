@@ -1,18 +1,20 @@
 ### neovim from scratch
 
 - [x] <leader>h remove highlight
-- [x] netrw (switched to nvim-tree)
-  + [ ] auto refresh
-  + [ ] follow current buffer
-  + [ ] key mapping to focus file explorer
-- [x] bufferline - text_align = left
 - [x] nvim-tree
-  + [x] add mapping to toggle "wide" and "narrow"
+  + [ ] auto refresh
+  + [x] follow current buffer
+  + [x] key mapping to focus file explorer
+  + [ ] creating a new file/directory in nvim-tree should retain focus (not jump to root) and open new file
+  + [ ] key mapping to create a new file as sibling to current buffer
+- [x] bufferline - text_align = left
 - [ ] add English dictionary spell checking
 - [ ] gitlens
   + :Gitsigns blame_line
 - [ ] multiple cursors
 - [x] close buffer should go to previous buffer or last open buffer, not focus file tree
+- [ ] key mapping to select all text in the current buffer
+- [ ] key mapping to toggle telescope find_files whether to find .gitignored files
 
 ### neovim
 

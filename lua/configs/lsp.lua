@@ -63,6 +63,8 @@ lspconfig.eslint.setup {}
 
 lspconfig.jsonls.setup {}
 
+lspconfig.sqls.setup {}
+
 lspconfig.sumneko_lua.setup {
   on_attach = function(client, bufnr)
     --    client.resolved_capabilities.document_formatting = false
