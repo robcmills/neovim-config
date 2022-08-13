@@ -41,6 +41,7 @@ vim.keymap.set("n", "s", "<cmd>wa<cr>", { desc = "Save" })
 vim.keymap.set("n", "<leader>yf", ":let @+ = expand('%')<cr>", { desc = "Copy current buffer filepath" })
 vim.keymap.set("n", "<leader>q", ":qa<cr>", { desc = "Quit" })
 vim.keymap.set("n", "<leader>h", "<cmd>nohlsearch<cr>", { desc = "No Highlight" })
+vim.keymap.set("n", "<leader>A", "ggvG$y", { desc = "Copy all" })
 
 -- window nav
 vim.keymap.set("n", "<leader>w", "<C-w>", { desc = "Easier window nav" })
@@ -52,11 +53,21 @@ vim.keymap.set("n", "T", ":BufferLineCyclePrev<cr>", { desc = "Prev buffer" })
 vim.keymap.set("n", "<leader><", ":BufferLineMovePrev<cr>", { desc = "Move buffer left" })
 vim.keymap.set("n", "<leader>>", ":BufferLineMoveNext<cr>", { desc = "Move buffer right" })
 vim.keymap.set("n", "<leader>C", ":%bd<cr>", { desc = "Close all buffers" })
+
 vim.keymap.set("n", "<leader>c", function()
   local bufnr = vim.api.nvim_get_current_buf()
   vim.cmd('bp')
   vim.api.nvim_buf_delete(bufnr, { force = true })
 end, { desc = "Close buffer" })
+
+vim.keymap.set("n", "<leader>n", function()
+  local filename = vim.fn.input('Filename: ')
+  if filename then
+    vim.cmd(':e %:h/' .. filename)
+    vim.cmd(':w')
+  end
+end, { desc = "New buffer" })
+
 
 -- telescope
 vim.keymap.set("n", "<leader>f", ":Telescope find_files<cr>", { desc = "Find files" })
@@ -88,14 +99,9 @@ vim.keymap.set("n", "<leader>E", ":NvimTreeToggle<cr>", { desc = "Toggle file tr
 
 -- toggle comment
 vim.keymap.set("n", "<leader>/", function()
-  require("Comment.api").toggle_current_linewise()
+  require("Comment.api").toggle.linewise.current()
 end, { desc = "Comment line" })
-vim.keymap.set(
-  "v",
-  "<leader>/",
-  "<esc><cmd>lua require('Comment.api').toggle_linewise_op(vim.fn.visualmode())<cr>",
-  { desc = "Toggle comment line" }
-)
+vim.keymap.set('x', '<leader>/', '<esc><cmd>lua require("Comment.api").toggle.linewise(vim.fn.visualmode())<cr>')
 
 -- eslint
 vim.keymap.set("n", "<leader>a", ":EslintFixAll<cr>", { desc = "EslintFixAll" })
