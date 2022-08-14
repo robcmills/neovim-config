@@ -79,7 +79,7 @@ lspconfig.sumneko_lua.setup {
   settings = {
     Lua = {
       diagnostics = {
-        globals = { "use", "vim" },
+        globals = { "use", "vim", 'hs' },
       },
     },
   },

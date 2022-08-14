@@ -26,6 +26,7 @@ vim.opt.wrap = true
 vim.opt.linebreak = true
 -- indent
 vim.opt.shiftwidth = 2 -- Number of space inserted for indentation
+vim.opt.autoindent = true
 vim.opt.copyindent = true -- Copy the previous indentation on autoindenting
 vim.opt.preserveindent = true -- Preserve indent structure as much as possible
 
@@ -108,3 +109,4 @@ vim.keymap.set("n", "<leader>a", ":EslintFixAll<cr>", { desc = "EslintFixAll" })
 
 
 -- lsp see lua/configs/lsp.lua
+

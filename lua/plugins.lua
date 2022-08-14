@@ -125,6 +125,22 @@ return require('packer').startup {
       end,
     }
 
+    use {
+      'windwp/nvim-autopairs',
+      after = 'nvim-treesitter',
+      config = function()
+        require 'configs.autopairs'
+      end,
+    }
+
+    use {
+      'windwp/nvim-ts-autotag',
+      after = 'nvim-treesitter',
+      config = function()
+        require 'configs.ts-autotag'
+      end,
+    }
+
   end,
   config = {
     display = {
