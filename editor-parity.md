@@ -55,6 +55,8 @@
   + :set wrap
   + :set linebreak
   + https://vim.fandom.com/wiki/Word_wrap_without_line_breaks
+  + :set textwidth=80
+  + :h gq
 - [ ] open a new file in the same directory as active buffer
   + <leader>o a (focus neotree then add file/folder)
   + <leader>e a? (focus nvimtree then add file/folder)

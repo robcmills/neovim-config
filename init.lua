@@ -1,5 +1,6 @@
 require 'plugins'
 require 'configs.tokyonight'
+-- require 'colemak'
 
 -- netrw file explorer
 vim.g.netrw_banner = 0
@@ -42,7 +43,7 @@ vim.keymap.set("n", "s", "<cmd>wa<cr>", { desc = "Save" })
 vim.keymap.set("n", "<leader>yf", ":let @+ = expand('%')<cr>", { desc = "Copy current buffer filepath" })
 vim.keymap.set("n", "<leader>q", ":qa<cr>", { desc = "Quit" })
 vim.keymap.set("n", "<leader>h", "<cmd>nohlsearch<cr>", { desc = "No Highlight" })
-vim.keymap.set("n", "<leader>A", "ggvG$y", { desc = "Copy all" })
+vim.keymap.set("n", "<leader>A", "gg0vG$y", { desc = "Copy all" })
 
 -- window nav
 vim.keymap.set("n", "<leader>w", "<C-w>", { desc = "Easier window nav" })
@@ -106,7 +107,6 @@ vim.keymap.set('x', '<leader>/', '<esc><cmd>lua require("Comment.api").toggle.li
 
 -- eslint
 vim.keymap.set("n", "<leader>a", ":EslintFixAll<cr>", { desc = "EslintFixAll" })
-
 
 -- lsp see lua/configs/lsp.lua
 
