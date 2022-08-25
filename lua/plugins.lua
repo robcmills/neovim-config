@@ -26,6 +26,7 @@ return require('packer').startup {
 
     use {
       'kyazdani42/nvim-web-devicons',
+      event = "VimEnter",
       config = function()
         require "configs.icons"
       end,
@@ -44,6 +45,7 @@ return require('packer').startup {
 
     use {
       'akinsho/bufferline.nvim',
+      after = "nvim-web-devicons",
       tag = 'v2.*',
       requires = 'kyazdani42/nvim-web-devicons',
       config = function()
@@ -87,7 +89,7 @@ return require('packer').startup {
     use { 'saadparwaiz1/cmp_luasnip', after = 'nvim-cmp' }
 
     -- Built-in LSP
-    use 'neovim/nvim-lspconfig'
+    use { 'neovim/nvim-lspconfig', event = 'VimEnter' }
 
     -- LSP manager
     use {
