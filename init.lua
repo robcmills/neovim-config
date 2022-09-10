@@ -2,6 +2,18 @@ require 'plugins'
 require 'configs.tokyonight'
 -- require 'colemak'
 
+local function vim_opt_toggle(opt, on, off, name)
+  local message = name
+  if vim.opt[opt]:get() == off then
+    vim.opt[opt] = on
+    message = message .. " Enabled"
+  else
+    vim.opt[opt] = off
+    message = message .. " Disabled"
+  end
+  vim.notify(message)
+end
+
 -- netrw file explorer
 vim.g.netrw_banner = 0
 vim.g.netrw_liststyle = 3 -- tree style listing
@@ -107,6 +119,17 @@ vim.keymap.set('x', '<leader>/', '<esc><cmd>lua require("Comment.api").toggle.li
 
 -- eslint
 vim.keymap.set("n", "<leader>a", ":EslintFixAll<cr>", { desc = "EslintFixAll" })
+
+-- spell check
+vim.keymap.set('n', '<leader>s', function()
+  vim.notify('spell')
+  vim_opt_toggle('spell', true, false, 'Spell')
+end, { desc = 'Toggle spell checking' })
+-- vim.cmd('setlocal spell spelllang=en_us')
+vim.opt.spelllang = 'en_us'
+-- Show nine spell checking candidates at most
+vim.opt.spellsuggest = 'best,9'
+
 
 -- lsp see lua/configs/lsp.lua
 
