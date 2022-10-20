@@ -1,6 +1,6 @@
 require 'plugins'
 require 'configs.tokyonight'
--- require 'colemak'
+require 'colemak'
 
 local function vim_opt_toggle(opt, on, off, name)
   local message = name
@@ -133,3 +133,4 @@ vim.opt.spellsuggest = 'best,9'
 
 -- lsp see lua/configs/lsp.lua
 
+-- vim.api.nvim_create_autocmd('BufReadPost', { pattern = '*.overlay', command = 'set syntax=c'})
