@@ -1,5 +1,22 @@
+### telescope improvements
+
+- [ ] ability to edit/copy/dump results list
+- [ ] nested lsp references
+- [ ] key mapping to toggle telescope find_files whether to find .gitignored files
+- [ ] scoped find_files
+- [ ] vscode features
+- [ ] how to scope a live grep
+- [ ] find_files
+  * [ ] ignores .dotfiles
+  * [ ] should not render files until search is not empty
+  * [ ] should debounce?
+- [ ] lsp references should group same filepaths
+
+
+
 ### neovim from scratch
 
+- [ ] autocomplete dropdown should show paths for imports
 - [x] <leader>h remove highlight
 - [x] nvim-tree
   + [ ] auto refresh
@@ -16,7 +33,6 @@
 - [x] close buffer should go to previous buffer or last open buffer, not focus file tree
 - [x] key mapping to select all text in the current buffer
   + <leader>A
-- [ ] key mapping to toggle telescope find_files whether to find .gitignored files
 
 ### neovim
 
@@ -53,6 +69,7 @@
 - [ ] global (project wide) find and replace
 - [x] toggle text wrapping
   + :set wrap
+  + :set nowrap
   + :set linebreak
   + https://vim.fandom.com/wiki/Word_wrap_without_line_breaks
   + :set textwidth=80
@@ -61,11 +78,12 @@
   + <leader>o a (focus neotree then add file/folder)
   + <leader>e a? (focus nvimtree then add file/folder)
 - [ ] open a new file in a new window
-  + :new ?
+  + <leader>n
 - [x] highlight all occurences of hovered word
   + * to search forward
   + # to search backward
 - [ ] show vertical line at 80, 100 columns
+  + looks weird
 - [x] key mapping to copy file path of current file
   + <leader>yf yank filepath
 - [ ] key mapping to sort lines
@@ -112,13 +130,6 @@
 - [x] TS and eslint errors in the sidebar "jiggling" pane width
   + Need to set width of gutter as a constant
 - [x] adjust color theme to make comments slightly brighter
-- [ ] telescope
-  + [ ] how to scope a live grep
-  + [ ] find_files
-    * [ ] ignores .dotfiles
-    * [ ] should not render files until search is not empty
-    * [ ] should debounce?
-  + [ ] lsp references should group same filepaths
 - [ ] fix autoclose tags
 
 

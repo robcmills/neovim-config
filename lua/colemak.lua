@@ -14,5 +14,6 @@ vim.keymap.set("x", "i", "l", { desc = "Right (l)" })
 vim.keymap.set("x", "l", "i")
 
 vim.keymap.set("n", "N", "<C-d>", { desc = "Page down" })
+vim.keymap.set("n", "J", "N", { desc = "Previous search result" })
 vim.keymap.set("n", "E", "<C-u>", { desc = "Page up" })
 

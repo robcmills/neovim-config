@@ -49,8 +49,8 @@ vim.keymap.set("", "<Space>", "<Nop>") -- disable space because leader
 
 vim.keymap.set("i", "<Tab>", "<Esc>")
 vim.keymap.set("n", "U", "<C-r>", { desc = "Redo" })
-vim.keymap.set("n", "J", "<C-d>", { desc = "Page down" })
-vim.keymap.set("n", "K", "<C-u>", { desc = "Page up" })
+-- vim.keymap.set("n", "J", "<C-d>", { desc = "Page down" }) -- disabled because colemak
+-- vim.keymap.set("n", "K", "<C-u>", { desc = "Page up" })
 vim.keymap.set("n", "s", "<cmd>wa<cr>", { desc = "Save" })
 vim.keymap.set("n", "<leader>yf", ":let @+ = expand('%')<cr>", { desc = "Copy current buffer filepath" })
 vim.keymap.set("n", "<leader>q", ":qa<cr>", { desc = "Quit" })
