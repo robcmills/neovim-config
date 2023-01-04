@@ -70,7 +70,7 @@ lspconfig.sumneko_lua.setup {
     --    client.resolved_capabilities.document_formatting = false
     on_attach(client, bufnr)
     map("n", "<leader>lf", function()
-      vim.lsp.buf.formatting_sync {
+      vim.lsp.buf.format {
         tabSize = 2,
         insertSpaces = true,
       }
