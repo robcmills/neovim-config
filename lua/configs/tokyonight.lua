@@ -1,7 +1,11 @@
--- local colors = require 'colors'
-
 local bg = '#0d1116'
-vim.g.tokyonight_colors = { bg = bg }
-vim.g.tokyonight_style = 'night'
-vim.cmd [[colorscheme tokyonight]]
+
+require('tokyonight').setup({
+  style = 'night',
+  on_colors = function(colors)
+    colors.bg = bg
+  end
+})
+
+vim.cmd[[colorscheme tokyonight]]
 vim.cmd('highlight VertSplit guibg=' .. bg .. ' guifg=White')

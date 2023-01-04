@@ -5,6 +5,8 @@ return require('packer').startup {
     -- colorscheme
     use 'folke/tokyonight.nvim'
 
+    use 'github/copilot.vim'
+
     use {
       'nvim-treesitter/nvim-treesitter',
       run = ':TSUpdate',

@@ -1,7 +1,10 @@
 vim.opt.termguicolors = true
 require'bufferline'.setup{
   options = {
-    indicator_icon = '┃ ',
+    indicator = {
+      icon = '┃ ',
+      style = 'icon',
+    },
     max_name_length = 50,
     offsets = {
       { filetype = 'netrw', text = '', padding = 0 },
