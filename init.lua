@@ -134,3 +134,22 @@ vim.opt.spellsuggest = 'best,9'
 -- lsp see lua/configs/lsp.lua
 
 -- vim.api.nvim_create_autocmd('BufReadPost', { pattern = '*.overlay', command = 'set syntax=c'})
+
+local function conflicts()
+  command = 'git diff --name-only --diff-filter=U'
+  list = vim.fn.system(command)
+
+  if list ~= '' then
+    files = vim.split(list, '\n')
+    for _, file in pairs(files) do
+      vim.api.nvim_command('edit ' .. string.gsub(file, "web/icedemon/", ""))
+    end
+  else
+    vim.api.nvim_err_write("No Git merge conflicts found.\n")
+  end
+end
+
+vim.keymap.set('n', '<leader>x', function()
+  conflicts()
+end, { desc = 'Open all files with git merge conflicts' })
+
