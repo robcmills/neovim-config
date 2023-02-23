@@ -72,36 +72,30 @@ return require('packer').startup {
       end,
     }
 
+    -- LSP
+    use {
+      'neovim/nvim-lspconfig',
+      config = function()
+        require 'configs.lsp'
+      end,
+    }
+
     -- Completion engine
     use {
       'hrsh7th/nvim-cmp',
-      event = "InsertEnter",
       config = function()
         require "configs.cmp"
       end,
     }
 
     -- Snippet completion sources
-    use { 'L3MON4D3/LuaSnip', after = 'nvim-cmp' }
+    use { 'hrsh7th/cmp-nvim-lsp', after = 'nvim-cmp' }
     use { 'hrsh7th/cmp-buffer', after = 'nvim-cmp' }
     use { 'hrsh7th/cmp-cmdline', after = 'nvim-cmp' }
     use { 'hrsh7th/cmp-git', after = 'nvim-cmp' }
-    use { 'hrsh7th/cmp-nvim-lsp', after = 'nvim-cmp' }
     use { 'hrsh7th/cmp-path', after = 'nvim-cmp' }
     use { 'saadparwaiz1/cmp_luasnip', after = 'nvim-cmp' }
-
-    -- Built-in LSP
-    use { 'neovim/nvim-lspconfig', event = 'VimEnter' }
-
-    -- LSP manager
-    use {
-      'williamboman/nvim-lsp-installer',
-      after = { 'nvim-lspconfig', 'cmp-nvim-lsp' },
-      config = function()
-        require 'configs.nvim-lsp-installer'
-        require 'configs.lsp'
-      end,
-    }
+    use { 'L3MON4D3/LuaSnip', after = 'nvim-cmp' }
 
     -- Comment
     use {

@@ -46,7 +46,7 @@ local on_attach = function(_, bufnr)
 end
 
 local lsp_defaults = {
-  capabilities = require 'cmp_nvim_lsp'.default_capabilities(vim.lsp.protocol.make_client_capabilities()),
+  -- capabilities = require 'cmp_nvim_lsp'.default_capabilities(vim.lsp.protocol.make_client_capabilities()),
   on_attach = on_attach,
 }
 
@@ -65,7 +65,7 @@ lspconfig.jsonls.setup {}
 
 lspconfig.sqls.setup {}
 
-lspconfig.sumneko_lua.setup {
+lspconfig.lua_ls.setup {
   on_attach = function(client, bufnr)
     --    client.resolved_capabilities.document_formatting = false
     on_attach(client, bufnr)
@@ -89,9 +89,9 @@ lspconfig.tsserver.setup {
   cmd = {
     'typescript-language-server',
     '--stdio',
-    -- '--log-level', '4',
     -- '--tsserver-log-file', '/Users/robcmills/.cache/nvim/typescript-language-server.log',
     -- '--tsserver-log-verbosity', 'verbose',
+    -- '--log-level', '4',
   },
   init_options = {
     preferences = {
@@ -136,3 +136,4 @@ vim.diagnostic.config {
 
 vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
 vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = "rounded" })
+
