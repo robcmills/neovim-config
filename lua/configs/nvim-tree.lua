@@ -1,6 +1,5 @@
 require 'nvim-tree'.setup {
   hijack_unnamed_buffer_when_opening = true,
-  open_on_setup = true,
   update_focused_file = { enable = true },
   remove_keymaps = { "e", "E" }, -- clashes with colemak bindings
   renderer = {
@@ -25,3 +24,9 @@ require 'nvim-tree'.setup {
     side = 'left',
   },
 }
+
+local function open_nvim_tree()
+  require("nvim-tree.api").tree.open()
+end
+
+vim.api.nvim_create_autocmd({ "VimEnter" }, { callback = open_nvim_tree })
