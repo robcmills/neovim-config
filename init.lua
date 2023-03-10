@@ -49,13 +49,13 @@ vim.keymap.set("", "<Space>", "<Nop>") -- disable space because leader
 
 vim.keymap.set("i", "<Tab>", "<Esc>")
 vim.keymap.set("n", "U", "<C-r>", { desc = "Redo" })
--- vim.keymap.set("n", "J", "<C-d>", { desc = "Page down" }) -- disabled because colemak
--- vim.keymap.set("n", "K", "<C-u>", { desc = "Page up" })
+vim.keymap.set("n", "J", "gJi <ESC>ciW <ESC>", { desc = "Join lines (and remove excess whitespace)" })
 vim.keymap.set("n", "s", "<cmd>wa<cr>", { desc = "Save" })
 vim.keymap.set("n", "<leader>yf", ":let @+ = expand('%')<cr>", { desc = "Copy current buffer filepath" })
 vim.keymap.set("n", "<leader>q", ":qa<cr>", { desc = "Quit" })
 vim.keymap.set("n", "<leader>h", "<cmd>nohlsearch<cr>", { desc = "No Highlight" })
 vim.keymap.set("n", "<leader>A", "gg0vG$y", { desc = "Copy all" })
+vim.keymap.set("n", "<leader>'", "ciw''<ESC>P", { desc = "Surround with quotes" })
 
 -- window nav
 vim.keymap.set("n", "<leader>w", "<C-w>", { desc = "Easier window nav" })
@@ -98,6 +98,7 @@ end, { desc = "Search buffers" })
 vim.keymap.set("n", "<leader>p", function()
   require("telescope.builtin").help_tags()
 end, { desc = "Search help" })
+vim.keymap.set("n", "<leader>m", ":Telescope symbols<cr>", { desc = "Symbols" })
 
 -- nvim-tree
 vim.keymap.set("n", "<leader>e", function()
