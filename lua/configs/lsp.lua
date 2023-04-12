@@ -63,7 +63,7 @@ lspconfig.eslint.setup {}
 
 lspconfig.jsonls.setup {}
 
-lspconfig.sqls.setup {}
+lspconfig.sqlls.setup {}
 
 lspconfig.lua_ls.setup {
   on_attach = function(client, bufnr)
@@ -114,6 +114,8 @@ capabilities.textDocument.completion.completionItem.snippetSupport = true
 lspconfig.cssls.setup {
   capabilities = capabilities,
 }
+
+lspconfig.tailwindcss.setup {}
 
 -- diagnostics
 local signs = {

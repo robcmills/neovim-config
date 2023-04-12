@@ -55,7 +55,8 @@ vim.keymap.set("n", "<leader>yf", ":let @+ = expand('%')<cr>", { desc = "Copy cu
 vim.keymap.set("n", "<leader>q", ":qa<cr>", { desc = "Quit" })
 vim.keymap.set("n", "<leader>h", "<cmd>nohlsearch<cr>", { desc = "No Highlight" })
 vim.keymap.set("n", "<leader>A", "gg0vG$y", { desc = "Copy all" })
-vim.keymap.set("n", "<leader>'", "ciw''<ESC>P", { desc = "Surround with quotes" })
+vim.keymap.set("n", "<leader>'", "ciw''<ESC>P", { desc = "Surround word with single quotes" })
+vim.keymap.set("n", '<leader>"', 'ciw""<ESC>P', { desc = "Surround word with double quotes" })
 
 -- window nav
 vim.keymap.set("n", "<leader>w", "<C-w>", { desc = "Easier window nav" })
@@ -137,11 +138,11 @@ vim.opt.spellsuggest = 'best,9'
 -- vim.api.nvim_create_autocmd('BufReadPost', { pattern = '*.overlay', command = 'set syntax=c'})
 
 local function conflicts()
-  command = 'git diff --name-only --diff-filter=U'
-  list = vim.fn.system(command)
+  local command = 'git diff --name-only --diff-filter=U'
+  local list = vim.fn.system(command)
 
   if list ~= '' then
-    files = vim.split(list, '\n')
+    local files = vim.split(list, '\n')
     for _, file in pairs(files) do
       vim.api.nvim_command('edit ' .. string.gsub(file, "web/icedemon/", ""))
     end
