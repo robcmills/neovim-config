@@ -16,13 +16,13 @@
 
 ### neovim from scratch
 
-- [ ] autocomplete dropdown should show paths for imports
+- [x] autocomplete dropdown should show paths for imports
 - [x] <leader>h remove highlight
 - [x] nvim-tree
   + [ ] auto refresh
   + [x] follow current buffer
   + [x] key mapping to focus file explorer
-  + [ ] creating a new file/directory in nvim-tree should retain focus (not jump to root) and open new file
+  + [x] creating a new file/directory in nvim-tree should retain focus (not jump to root) and open new file
   + [x] key mapping to create a new file as sibling to current buffer
     * <leader>n
 - [x] bufferline - text_align = left
@@ -113,8 +113,8 @@
   + use tmux panes instead of neovim panes to solve this
     <C-b> " Split window vertically
     <C-b> % Split window horizontally
-- [ ] github copilot
-  + [ ] figure out tab mapping and collision with nvim-cmp
+- [x] github copilot
+  + [x] figure out tab mapping and collision with nvim-cmp
   + `vim.keymap.set("i", "<C-o>", "<cmd>:lua vim.fn['copilot#Accept']('')<cr>", { desc = "Accept Copilot suggestion" })`
 - [ ] lsp
   + [ ] auto import paths not found for third party libraries

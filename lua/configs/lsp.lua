@@ -115,7 +115,7 @@ lspconfig.cssls.setup {
   capabilities = capabilities,
 }
 
-lspconfig.tailwindcss.setup {}
+-- lspconfig.tailwindcss.setup {}
 
 -- diagnostics
 local signs = {
