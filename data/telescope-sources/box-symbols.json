@@ -21,5 +21,8 @@
   ["→", "RIGHTWARDS ARROW"],
   ["↓", "DOWNWARDS ARROW"],
   ["↔", "LEFT RIGHT ARROW"],
-  ["↕", "UP DOWN ARROW"]
+  ["↕", "UP DOWN ARROW"],
+  ["✓", "CHECK MARK"],
+  ["○", "WHITE CIRCLE"],
+  ["●", "BLACK CIRCLE"]
 ]

@@ -28,8 +28,8 @@ require 'nvim-tree'.setup {
 local function open_nvim_tree(data)
   local api = require("nvim-tree.api")
 
-  -- if vim was opened with a directory, cd into it and open nvim-tree
   local is_directory = vim.fn.isdirectory(data.file) == 1
+  local is_file = vim.fn.filereadable(data.file) == 1
 
   if is_directory then
     vim.cmd.cd(data.file)
@@ -37,11 +37,8 @@ local function open_nvim_tree(data)
     return
   end
 
-  -- else if vim was opened with a file, close nvim-tree
-  local is_real_file = vim.fn.filereadable(data.file) == 1
-  local is_no_name = data.file == "*"
 
-  if is_real_file and not is_no_name then
+  if is_file then
     api.tree.close()
   end
 end
