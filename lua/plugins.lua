@@ -27,7 +27,7 @@ return require('packer').startup {
     }
 
     use {
-      'kyazdani42/nvim-web-devicons',
+      'nvim-tree/nvim-web-devicons',
       event = "VimEnter",
       config = function()
         require "configs.icons"
@@ -36,9 +36,9 @@ return require('packer').startup {
 
     -- File Tree
     use {
-      'kyazdani42/nvim-tree.lua',
+      'nvim-tree/nvim-tree.lua',
       requires = {
-        'kyazdani42/nvim-web-devicons',
+        'nvim-tree/nvim-web-devicons',
       },
       config = function()
         require "configs.nvim-tree"
@@ -49,7 +49,7 @@ return require('packer').startup {
       'akinsho/bufferline.nvim',
       after = "nvim-web-devicons",
       tag = 'v2.*',
-      requires = 'kyazdani42/nvim-web-devicons',
+      requires = 'nvim-tree/nvim-web-devicons',
       config = function()
         require 'configs.bufferline'
       end,
