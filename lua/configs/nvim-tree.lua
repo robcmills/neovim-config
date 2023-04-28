@@ -76,7 +76,6 @@ require 'nvim-tree'.setup {
   on_attach = on_attach,
   hijack_unnamed_buffer_when_opening = true,
   update_focused_file = { enable = true },
-  -- remove_keymaps = { "e", "E" }, -- clashes with colemak bindings
   renderer = {
     icons = {
       git_placement = 'signcolumn',

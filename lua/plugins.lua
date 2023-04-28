@@ -28,22 +28,27 @@ return require('packer').startup {
 
     use {
       'nvim-tree/nvim-web-devicons',
-      event = "VimEnter",
-      config = function()
-        require "configs.icons"
-      end,
+      'nvim-tree/nvim-tree.lua',
     }
 
+    -- use {
+    --   'nvim-tree/nvim-web-devicons',
+    --   config = function()
+    --     require "configs.icons"
+    --   end,
+    -- }
+
     -- File Tree
-    use {
-      'nvim-tree/nvim-tree.lua',
-      requires = {
-        'nvim-tree/nvim-web-devicons',
-      },
-      config = function()
-        require "configs.nvim-tree"
-      end,
-    }
+    -- use {
+    --   'nvim-tree/nvim-tree.lua',
+    --   after = "nvim-web-devicons",
+    --   requires = {
+    --     'nvim-tree/nvim-web-devicons',
+    --   },
+    --   config = function()
+    --     require "configs.nvim-tree"
+    --   end,
+    -- }
 
     use {
       'akinsho/bufferline.nvim',
