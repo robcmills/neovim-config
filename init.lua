@@ -43,6 +43,9 @@ vim.opt.autoindent = true
 vim.opt.copyindent = true -- Copy the previous indentation on autoindenting
 vim.opt.preserveindent = true -- Preserve indent structure as much as possible
 
+-- use ripgrep for grepping (because it's faster)
+vim.opt.grepprg = "rg --vimgrep --no-heading --smart-case"
+
 -- key bindings
 vim.g.mapleader = " "
 vim.keymap.set("", "<Space>", "<Nop>") -- disable space because leader
