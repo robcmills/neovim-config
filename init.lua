@@ -46,6 +46,10 @@ vim.opt.preserveindent = true -- Preserve indent structure as much as possible
 -- use ripgrep for grepping (because it's faster)
 vim.opt.grepprg = "rg --vimgrep --no-heading --smart-case"
 
+-- folding
+vim.opt.foldmethod = "indent"
+vim.opt.foldlevel = 99
+
 -- key bindings
 vim.g.mapleader = " "
 vim.keymap.set("", "<Space>", "<Nop>") -- disable space because leader
@@ -71,6 +75,10 @@ vim.keymap.set("n", "T", ":BufferLineCyclePrev<cr>", { desc = "Prev buffer" })
 vim.keymap.set("n", "<leader><", ":BufferLineMovePrev<cr>", { desc = "Move buffer left" })
 vim.keymap.set("n", "<leader>>", ":BufferLineMoveNext<cr>", { desc = "Move buffer right" })
 vim.keymap.set("n", "<leader>C", ":%bd<cr>", { desc = "Close all buffers" })
+
+-- indent
+vim.keymap.set("v", "<", "<gv", { desc = "Decrease indent without losing selection" })
+vim.keymap.set("v", ">", ">gv", { desc = "Increase indent without losing selection" })
 
 vim.keymap.set("n", "<leader>c", function()
   local bufnr = vim.api.nvim_get_current_buf()

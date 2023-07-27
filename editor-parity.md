@@ -13,7 +13,6 @@
 - [ ] lsp references should group same filepaths
 
 
-
 ### neovim from scratch
 
 - [x] autocomplete dropdown should show paths for imports
@@ -89,6 +88,8 @@
 - [ ] key mapping to sort lines
   + :sort
 - [ ] folding
+  + how to indent without unfolding
+- [ ] how to indent without exiting visual mode and losing selection
 
 
 ### astrovim parity
