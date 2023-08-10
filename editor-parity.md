@@ -26,8 +26,9 @@
     * <leader>n
 - [x] bufferline - text_align = left
 - [ ] add English dictionary spell checking
-- [ ] gitlens
+- [x] gitlens
   + :Gitsigns blame_line
+  + <leader>tb
 - [ ] multiple cursors
 - [x] close buffer should go to previous buffer or last open buffer, not focus file tree
 - [x] key mapping to select all text in the current buffer
@@ -87,9 +88,9 @@
   + <leader>yf yank filepath
 - [ ] key mapping to sort lines
   + :sort
-- [ ] folding
-  + how to indent without unfolding
-- [ ] how to indent without exiting visual mode and losing selection
+- [x] folding
+  + [ ] how to indent without unfolding
+- [x] how to indent without exiting visual mode and losing selection
 
 
 ### astrovim parity

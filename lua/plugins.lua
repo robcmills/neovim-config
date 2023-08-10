@@ -26,34 +26,24 @@ return require('packer').startup {
       end,
     }
 
-    use {
-      'nvim-tree/nvim-web-devicons',
-      'nvim-tree/nvim-tree.lua',
-    }
-
-    -- use {
-    --   'nvim-tree/nvim-web-devicons',
-    --   config = function()
-    --     require "configs.icons"
-    --   end,
-    -- }
+    use 'nvim-tree/nvim-web-devicons'
 
     -- File Tree
-    -- use {
-    --   'nvim-tree/nvim-tree.lua',
-    --   after = "nvim-web-devicons",
-    --   requires = {
-    --     'nvim-tree/nvim-web-devicons',
-    --   },
-    --   config = function()
-    --     require "configs.nvim-tree"
-    --   end,
-    -- }
+    use {
+      'nvim-tree/nvim-tree.lua',
+      after = "nvim-web-devicons",
+      requires = {
+        'nvim-tree/nvim-web-devicons',
+      },
+      config = function()
+        require "configs.nvim-tree"
+      end,
+    }
 
     use {
       'akinsho/bufferline.nvim',
       after = "nvim-web-devicons",
-      tag = 'v2.*',
+      tag = '*',
       requires = 'nvim-tree/nvim-web-devicons',
       config = function()
         require 'configs.bufferline'
@@ -68,7 +58,7 @@ return require('packer').startup {
     -- Telescope
     use {
       'nvim-telescope/telescope.nvim',
-      tag = '0.1.0',
+      tag = '0.1.2',
       requires = { { 'nvim-lua/plenary.nvim' } },
       cmd = "Telescope",
       module = "telescope",
