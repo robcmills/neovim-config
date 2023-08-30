@@ -1,3 +1,5 @@
+vim.notify('plugins.lua')
+
 return require('packer').startup {
   function(use)
     use 'wbthomason/packer.nvim'
@@ -100,12 +102,20 @@ return require('packer').startup {
       end
     }
 
-    -- Git integration
+    -- Git integrations
     use {
       'lewis6991/gitsigns.nvim',
       event = 'BufEnter',
       config = function()
         require 'configs.gitsigns'
+      end,
+    }
+
+    use {
+      'sindrets/diffview.nvim',
+      config = function()
+        vim.api.nvim_out_write('config')
+        require('configs.diffview')
       end,
     }
 

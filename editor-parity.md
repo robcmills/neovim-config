@@ -29,6 +29,8 @@
 - [x] gitlens
   + :Gitsigns blame_line
   + <leader>tb
+  + [ ] show diff from development
+    Gitsigns diffthis development
 - [ ] multiple cursors
 - [x] close buffer should go to previous buffer or last open buffer, not focus file tree
 - [x] key mapping to select all text in the current buffer

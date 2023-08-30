@@ -72,6 +72,9 @@ vim.keymap.set("n", "<leader>A", "gg0vG$y", { desc = "Copy all" })
 vim.keymap.set("n", "<leader>'", "ciw''<ESC>P", { desc = "Surround word with single quotes" })
 vim.keymap.set("n", '<leader>"', 'ciw""<ESC>P', { desc = "Surround word with double quotes" })
 
+-- terminal
+vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', { desc = 'Exit insert mode in terminal' })
+
 -- window nav
 vim.keymap.set("n", "<leader>w", "<C-w>", { desc = "Easier window nav" })
 vim.keymap.set("n", "<leader>e", ":Lex<cr>", { desc = "Toggle File explorer" })
@@ -81,18 +84,12 @@ vim.keymap.set("n", "t", ":BufferLineCycleNext<cr>", { desc = "Next buffer" })
 vim.keymap.set("n", "T", ":BufferLineCyclePrev<cr>", { desc = "Prev buffer" })
 vim.keymap.set("n", "<leader><", ":BufferLineMovePrev<cr>", { desc = "Move buffer left" })
 vim.keymap.set("n", "<leader>>", ":BufferLineMoveNext<cr>", { desc = "Move buffer right" })
-vim.keymap.set("n", "<leader>C", ":%bd<cr>", { desc = "Close all buffers" })
-
--- indent
-vim.keymap.set("v", "<", "<gv", { desc = "Decrease indent without losing selection" })
-vim.keymap.set("v", ">", ">gv", { desc = "Increase indent without losing selection" })
-
+vim.keymap.set("n", "<leader>C", ":%bd | NvimTreeFocus | NvimTreeCollapse<cr>", { desc = "Close all buffers" })
 vim.keymap.set("n", "<leader>c", function()
   local bufnr = vim.api.nvim_get_current_buf()
   vim.cmd('bp')
   vim.api.nvim_buf_delete(bufnr, { force = true })
 end, { desc = "Close buffer" })
-
 vim.keymap.set("n", "<leader>n", function()
   local filename = vim.fn.input('Filename: ')
   if filename then
@@ -101,6 +98,9 @@ vim.keymap.set("n", "<leader>n", function()
   end
 end, { desc = "New buffer" })
 
+-- indent
+vim.keymap.set("v", "<", "<gv", { desc = "Decrease indent without losing selection" })
+vim.keymap.set("v", ">", ">gv", { desc = "Increase indent without losing selection" })
 
 -- telescope
 vim.keymap.set("n", "<leader>f", ":Telescope find_files<cr>", { desc = "Find files" })
@@ -172,4 +172,15 @@ end
 vim.keymap.set('n', '<leader>x', function()
   conflicts()
 end, { desc = 'Open all files with git merge conflicts' })
+
+-- Treat .ejs files as .html
+vim.api.nvim_exec([[
+  au BufRead,BufNewFile *.ejs set filetype=html
+]], false)
+
+-- Global find and replace (preview)
+-- ! grep -rl --exclude-dir=node_modules "i18next-init" ./ | xargs sed -n 's/i18next-init/i18next-init-with-translations/gp'
+
+-- Global find and replace (commit)
+-- ! grep -rl --exclude-dir=node_modules "i18next-init" ./ | xargs sed -i 's/i18next-init/i18next-init-with-translations/gp'
 
