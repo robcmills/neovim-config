@@ -114,10 +114,11 @@ return require('packer').startup {
     use {
       'sindrets/diffview.nvim',
       config = function()
-        vim.api.nvim_out_write('config')
         require('configs.diffview')
       end,
     }
+
+    use 'tpope/vim-fugitive'
 
     -- Statusline
     use {

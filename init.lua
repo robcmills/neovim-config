@@ -76,7 +76,8 @@ vim.keymap.set("n", '<leader>"', 'ciw""<ESC>P', { desc = "Surround word with dou
 vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', { desc = 'Exit insert mode in terminal' })
 
 -- window nav
-vim.keymap.set("n", "<leader>w", "<C-w>", { desc = "Easier window nav" })
+vim.keymap.set("n", "<leader>w", "<C-w>w", { desc = "Move to next window", noremap = true })
+vim.keymap.set("n", "<leader>W", "<C-w>W", { desc = "Move to prev window", noremap = true })
 vim.keymap.set("n", "<leader>e", ":Lex<cr>", { desc = "Toggle File explorer" })
 
 -- buffer nav
@@ -104,7 +105,7 @@ vim.keymap.set("v", ">", ">gv", { desc = "Increase indent without losing selecti
 
 -- telescope
 vim.keymap.set("n", "<leader>f", ":Telescope find_files<cr>", { desc = "Find files" })
-vim.keymap.set("n", "<leader>g", ":Telescope live_grep<cr>", { desc = "Grep" })
+vim.keymap.set("n", "<leader>p", ":Telescope live_grep<cr>", { desc = "Grep" })
 vim.keymap.set("n", "<leader>r", function()
   require("telescope.builtin").lsp_references()
 end, { desc = "Search references" })
@@ -114,9 +115,6 @@ end, { desc = "Search diagnostics" })
 vim.keymap.set("n", "<leader>b", function()
   require("telescope.builtin").buffers()
 end, { desc = "Search buffers" })
-vim.keymap.set("n", "<leader>p", function()
-  require("telescope.builtin").help_tags()
-end, { desc = "Search help" })
 vim.keymap.set("n", "<leader>m", ":Telescope symbols<cr>", { desc = "Symbols" })
 
 -- nvim-tree
@@ -155,6 +153,7 @@ vim.opt.spellsuggest = 'best,9'
 
 -- vim.api.nvim_create_autocmd('BufReadPost', { pattern = '*.overlay', command = 'set syntax=c'})
 
+-- git
 local function conflicts()
   local command = 'git diff --name-only --diff-filter=U'
   local list = vim.fn.system(command)
@@ -172,6 +171,18 @@ end
 vim.keymap.set('n', '<leader>x', function()
   conflicts()
 end, { desc = 'Open all files with git merge conflicts' })
+
+vim.keymap.set('n', '<leader>gd', function()
+  vim.cmd('Git diff')
+  vim.cmd('only')
+end, { desc = 'Git diff' })
+
+vim.keymap.set('n', '<leader>gc', function()
+  vim.cmd('vsplit')
+  vim.cmd('Git add --all')
+  vim.cmd('Git commit')
+end, { desc = 'Git commit' })
+
 
 -- Treat .ejs files as .html
 vim.api.nvim_exec([[

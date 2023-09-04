@@ -28,3 +28,4 @@ require('diffview').setup({
     },
   },
 })
+
