@@ -182,7 +182,7 @@ vim.keymap.set('n', '<leader>gc', function()
   vim.cmd('Git add --all')
   vim.cmd('Git commit')
 end, { desc = 'Git commit' })
-
+-- test
 
 -- Treat .ejs files as .html
 vim.api.nvim_exec([[
