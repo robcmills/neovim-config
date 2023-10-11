@@ -1,16 +1,22 @@
+### embedded terminal
+
+- [ ] execute a command and dump output into a new buffer
+
+
 ### telescope improvements
 
 - [ ] ability to edit/copy/dump results list
 - [ ] nested lsp references
 - [ ] key mapping to toggle telescope find_files whether to find .gitignored files
-- [ ] scoped find_files
+- [ ] scoped find_files (include, exclude inputs)
 - [ ] vscode features
-- [ ] how to scope a live grep
+- [ ] scoped live grep
 - [ ] find_files
-  * [ ] ignores .dotfiles
+  * [ ] ignores .dotfiles toggle
+  * [ ] ignores .gitignore toggle
   * [ ] should not render files until search is not empty
   * [ ] should debounce?
-- [ ] lsp references should group same filepaths
+- [ ] live grep, lsp references should group same filepaths
 
 
 ### neovim from scratch

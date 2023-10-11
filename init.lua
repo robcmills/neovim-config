@@ -40,6 +40,7 @@ vim.opt.number = true -- show line numbers
 vim.opt.clipboard = "unnamedplus" -- yank to system clipboard
 vim.opt.signcolumn = 'yes:1'
 vim.opt.laststatus = 3 -- makes status line span full screen
+vim.opt.colorcolumn = "80,120" -- line length marker
 
 -- wrap text and don't break words
 vim.opt.wrap = true
@@ -85,7 +86,7 @@ vim.keymap.set("n", "t", ":BufferLineCycleNext<cr>", { desc = "Next buffer" })
 vim.keymap.set("n", "T", ":BufferLineCyclePrev<cr>", { desc = "Prev buffer" })
 vim.keymap.set("n", "<leader><", ":BufferLineMovePrev<cr>", { desc = "Move buffer left" })
 vim.keymap.set("n", "<leader>>", ":BufferLineMoveNext<cr>", { desc = "Move buffer right" })
-vim.keymap.set("n", "<leader>C", ":%bd | NvimTreeFocus | NvimTreeCollapse<cr>", { desc = "Close all buffers" })
+vim.keymap.set("n", "<leader>C", ":%bd | NvimTreeFocus | NvimTreeCollapse | NvimTreeRefresh<cr>", { desc = "Close all buffers" })
 vim.keymap.set("n", "<leader>c", function()
   local bufnr = vim.api.nvim_get_current_buf()
   vim.cmd('bp')
@@ -172,6 +173,10 @@ vim.keymap.set('n', '<leader>x', function()
   conflicts()
 end, { desc = 'Open all files with git merge conflicts' })
 
+vim.keymap.set('n', '<leader>gs', function()
+  vim.cmd('Git status --short --branch')
+end, { desc = 'Git status' })
+
 vim.keymap.set('n', '<leader>gd', function()
   vim.cmd('Git diff')
   vim.cmd('only')
@@ -182,6 +187,12 @@ vim.keymap.set('n', '<leader>gc', function()
   vim.cmd('Git add --all')
   vim.cmd('Git commit')
 end, { desc = 'Git commit' })
+
+vim.keymap.set('n', '<leader>gp', function()
+  vim.cmd('Git push')
+end, { desc = 'Git push' })
+
+
 -- test
 
 -- Treat .ejs files as .html
