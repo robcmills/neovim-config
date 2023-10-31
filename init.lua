@@ -64,7 +64,7 @@ vim.keymap.set("", "<Space>", "<Nop>") -- disable space because leader
 
 vim.keymap.set("i", "<Tab>", "<Esc>")
 vim.keymap.set("n", "U", "<C-r>", { desc = "Redo" })
-vim.keymap.set("n", "J", "gJi <ESC>ciW <ESC>", { desc = "Join lines (and remove excess whitespace)" })
+vim.keymap.set("n", "<C-j>", "gJi <ESC>ciW <ESC>", { desc = "Join lines (and remove excess whitespace)" })
 vim.keymap.set("n", "s", "<cmd>wa<cr>", { desc = "Save" })
 vim.keymap.set("n", "<leader>yf", ":let @+ = expand('%')<cr>", { desc = "Copy current buffer filepath" })
 vim.keymap.set("n", "<leader>q", ":qa<cr>", { desc = "Quit" })
@@ -74,7 +74,16 @@ vim.keymap.set("n", "<leader>'", "ciw''<ESC>P", { desc = "Surround word with sin
 vim.keymap.set("n", '<leader>"', 'ciw""<ESC>P', { desc = "Surround word with double quotes" })
 
 -- terminal
+-- vim.o.shell = "bash -l" -- use "login" bash to source .bash_profile
+vim.o.shell = "/Applications/fish.app/Contents/Resources/base/usr/local/bin/fish"
+vim.keymap.set('n', '<leader>t', ':term<cr>', { desc = 'Terminal' })
 vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', { desc = 'Exit insert mode in terminal' })
+vim.cmd [[
+  augroup terminal
+    autocmd!
+    autocmd TermOpen * setlocal nonumber norelativenumber
+  augroup END
+]]
 
 -- window nav
 vim.keymap.set("n", "<leader>w", "<C-w>w", { desc = "Move to next window", noremap = true })

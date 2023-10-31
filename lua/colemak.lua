@@ -1,4 +1,16 @@
 -- colemak adjustments
+
+-- vim.keymap.set("n", "n", function()
+--   if vim.v.searchforward ~= nil then
+--       -- You're in search context
+--       print("In Search Context!")
+--   else
+--       -- Normal context
+--       print("In Normal Context!")
+--   end
+-- end, { desc = "New buffer" })
+
+
 vim.keymap.set("n", "n", "j", { desc = "Down (j)" })
 vim.keymap.set("n", "j", "n")
 vim.keymap.set("n", "e", "k", { desc = "Up (k)" })

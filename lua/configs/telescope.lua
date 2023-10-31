@@ -28,15 +28,11 @@ require('telescope').setup({
   extensions = {},
 })
 
+-- :lua require('telescope.builtin').live_grep({ cwd = .github })
+-- :lua require('telescope.builtin').find_files({ cwd = 'src/js/openapi', no_ignore = true })
+
 -- builtin.live_grep({opts})                      *telescope.builtin.live_grep()*
 --     Search for a string and get results live as you type, respects .gitignore
-
--- Example:
-  -- :lua require('telescope.builtin').live_grep({
-  --   prompt_title = 'find string in open buffers...',
-  --   grep_open_files = true
-  -- })
-
 -- Options:  
   -- {cwd}                 (string)          root dir to search from (default: cwd, use utils.buffer_dir() to search relative to open buffer)
   -- {grep_open_files}     (boolean)         if true, restrict search to open files only, mutually exclusive with `search_dirs`
