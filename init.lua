@@ -193,8 +193,12 @@ end, { desc = 'Git diff' })
 
 vim.keymap.set('n', '<leader>gc', function()
   vim.cmd('vsplit')
+  vim.api.nvim_command('wincmd w')
   vim.cmd('Git add --all')
   vim.cmd('Git commit')
+  vim.api.nvim_command('wincmd w')
+  local current_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_close(current_win, false)
 end, { desc = 'Git commit' })
 
 vim.keymap.set('n', '<leader>gp', function()
