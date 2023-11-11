@@ -15,6 +15,15 @@ require('telescope').setup({
       height = 0.99,
       preview_cutoff = 120,
     },
+    vimgrep_arguments = {
+      "rg",
+      "--color=never",
+      "--no-heading",
+      "--with-filename",
+      "--line-number",
+      "--column",
+      "--ignore-case"
+    }
     --    file_ignore_patterns = '',
   },
   pickers = {
