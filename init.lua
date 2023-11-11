@@ -182,9 +182,7 @@ vim.keymap.set('n', '<leader>x', function()
   conflicts()
 end, { desc = 'Open all files with git merge conflicts' })
 
-vim.keymap.set('n', '<leader>gs', function()
-  vim.cmd('Git status --short --branch')
-end, { desc = 'Git status' })
+vim.keymap.set('n', '<leader>gs', ':term gs<cr>', { desc = 'Git status' })
 
 vim.keymap.set('n', '<leader>gd', function()
   vim.cmd('Git diff')
@@ -193,7 +191,6 @@ end, { desc = 'Git diff' })
 
 vim.keymap.set('n', '<leader>gc', function()
   vim.cmd('vsplit')
-  vim.api.nvim_command('wincmd w')
   vim.cmd('Git add --all')
   vim.cmd('Git commit')
   vim.api.nvim_command('wincmd w')
@@ -201,9 +198,7 @@ vim.keymap.set('n', '<leader>gc', function()
   vim.api.nvim_win_close(current_win, false)
 end, { desc = 'Git commit' })
 
-vim.keymap.set('n', '<leader>gp', function()
-  vim.cmd('Git push')
-end, { desc = 'Git push' })
+vim.keymap.set('n', '<leader>gp', ':term gp<cr>', { desc = 'Git push' })
 
 
 -- test
