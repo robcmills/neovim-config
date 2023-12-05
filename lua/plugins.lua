@@ -10,19 +10,19 @@ return require('packer').startup {
     use {
       'nvim-treesitter/nvim-treesitter',
       run = ':TSUpdate',
-      event = { "BufRead", "BufNewFile" },
+      event = { 'BufRead', 'BufNewFile' },
       cmd = {
-        "TSInstall",
-        "TSInstallInfo",
-        "TSInstallSync",
-        "TSUninstall",
-        "TSUpdate",
-        "TSUpdateSync",
-        "TSDisableAll",
-        "TSEnableAll",
+        'TSInstall',
+        'TSInstallInfo',
+        'TSInstallSync',
+        'TSUninstall',
+        'TSUpdate',
+        'TSUpdateSync',
+        'TSDisableAll',
+        'TSEnableAll',
       },
       config = function()
-        require "configs.treesitter"
+        require 'configs.treesitter'
       end,
     }
 
@@ -31,18 +31,18 @@ return require('packer').startup {
     -- File Tree
     use {
       'nvim-tree/nvim-tree.lua',
-      after = "nvim-web-devicons",
+      after = 'nvim-web-devicons',
       requires = {
         'nvim-tree/nvim-web-devicons',
       },
       config = function()
-        require "configs.nvim-tree"
+        require 'configs.nvim-tree'
       end,
     }
 
     use {
       'akinsho/bufferline.nvim',
-      after = "nvim-web-devicons",
+      after = 'nvim-web-devicons',
       tag = '*',
       requires = 'nvim-tree/nvim-web-devicons',
       config = function()
@@ -60,10 +60,10 @@ return require('packer').startup {
       'nvim-telescope/telescope.nvim',
       tag = '0.1.2',
       requires = { { 'nvim-lua/plenary.nvim' } },
-      cmd = "Telescope",
-      module = "telescope",
+      cmd = 'Telescope',
+      module = 'telescope',
       config = function()
-        require "configs.telescope"
+        require 'configs.telescope'
       end,
     }
 
@@ -79,7 +79,7 @@ return require('packer').startup {
     use {
       'hrsh7th/nvim-cmp',
       config = function()
-        require "configs.cmp"
+        require 'configs.cmp'
       end,
     }
 
@@ -143,11 +143,35 @@ return require('packer').startup {
       end,
     }
 
+    use {
+      'nvim-pack/nvim-spectre',
+      requires = { 'nvim-lua/plenary.nvim' },
+      config = function()
+        require('configs.spectre')
+      end,
+    }
+
+    use '~/src/nvim-pvg'
+
+    use 'MunifTanjim/nui.nvim'
+
+    use {
+      'jackMort/ChatGPT.nvim',
+      config = function()
+        require('configs.chatgpt')
+      end,
+      requires = {
+        'MunifTanjim/nui.nvim',
+        'nvim-lua/plenary.nvim',
+        'nvim-telescope/telescope.nvim'
+      }
+    }
+
   end,
   config = {
     display = {
       open_fn = function()
-        return require("packer.util").float { border = "rounded" }
+        return require('packer.util').float { border = 'rounded' }
       end,
     },
   },

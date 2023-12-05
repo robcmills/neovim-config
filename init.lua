@@ -74,8 +74,8 @@ vim.keymap.set("n", "<leader>'", "ciw''<ESC>P", { desc = "Surround word with sin
 vim.keymap.set("n", '<leader>"', 'ciw""<ESC>P', { desc = "Surround word with double quotes" })
 
 -- terminal
--- vim.o.shell = "bash -l" -- use "login" bash to source .bash_profile
-vim.o.shell = "/Applications/fish.app/Contents/Resources/base/usr/local/bin/fish"
+vim.o.shell = "bash -l" -- use "login" bash to source .bash_profile
+-- vim.o.shell = "/Applications/fish.app/Contents/Resources/base/usr/local/bin/fish"
 vim.keymap.set('n', '<leader>t', ':term<cr>', { desc = 'Terminal' })
 vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', { desc = 'Exit insert mode in terminal' })
 vim.cmd [[
@@ -95,7 +95,7 @@ vim.keymap.set("n", "t", ":BufferLineCycleNext<cr>", { desc = "Next buffer" })
 vim.keymap.set("n", "T", ":BufferLineCyclePrev<cr>", { desc = "Prev buffer" })
 vim.keymap.set("n", "<leader><", ":BufferLineMovePrev<cr>", { desc = "Move buffer left" })
 vim.keymap.set("n", "<leader>>", ":BufferLineMoveNext<cr>", { desc = "Move buffer right" })
-vim.keymap.set("n", "<leader>C", ":%bd | NvimTreeFocus | NvimTreeCollapse | NvimTreeRefresh<cr>", { desc = "Close all buffers" })
+vim.keymap.set("n", "<leader>C", ":%bd | NvimTreeFocus | NvimTreeCollapse | NvimTreeRefresh<cr>gg", { desc = "Close all buffers" })
 vim.keymap.set("n", "<leader>c", function()
   local bufnr = vim.api.nvim_get_current_buf()
   vim.cmd('bp')
@@ -114,8 +114,12 @@ vim.keymap.set("v", "<", "<gv", { desc = "Decrease indent without losing selecti
 vim.keymap.set("v", ">", ">gv", { desc = "Increase indent without losing selection" })
 
 -- telescope
-vim.keymap.set("n", "<leader>f", ":Telescope find_files<cr>", { desc = "Find files" })
-vim.keymap.set("n", "<leader>p", ":Telescope live_grep<cr>", { desc = "Grep" })
+vim.keymap.set("n", "<leader>f", function()
+  require("telescope.builtin").find_files()
+end, { desc = "Find files" })
+vim.keymap.set("n", "<leader>p", function()
+  require("telescope.builtin").live_grep()
+end, { desc = "Grep" })
 vim.keymap.set("n", "<leader>r", function()
   require("telescope.builtin").lsp_references()
 end, { desc = "Search references" })
@@ -125,7 +129,10 @@ end, { desc = "Search diagnostics" })
 vim.keymap.set("n", "<leader>b", function()
   require("telescope.builtin").buffers()
 end, { desc = "Search buffers" })
-vim.keymap.set("n", "<leader>m", ":Telescope symbols<cr>", { desc = "Symbols" })
+vim.keymap.set("n", "<leader>m", function()
+  require("telescope.builtin").symbols()
+end, { desc = "Symbols" })
+
 
 -- nvim-tree
 vim.keymap.set("n", "<leader>e", function()
@@ -184,10 +191,7 @@ end, { desc = 'Open all files with git merge conflicts' })
 
 vim.keymap.set('n', '<leader>gs', ':term gs<cr>', { desc = 'Git status' })
 
-vim.keymap.set('n', '<leader>gd', function()
-  vim.cmd('Git diff')
-  vim.cmd('only')
-end, { desc = 'Git diff' })
+vim.keymap.set('n', '<leader>gd', ':term gd<cr>', { desc = 'Git diff' })
 
 vim.keymap.set('n', '<leader>gc', function()
   vim.cmd('vsplit')
@@ -213,4 +217,13 @@ vim.api.nvim_exec([[
 
 -- Global find and replace (commit)
 -- ! grep -rl --exclude-dir=node_modules "i18next-init" ./ | xargs sed -i 's/i18next-init/i18next-init-with-translations/gp'
+
+
+-- nvim-pvg
+vim.keymap.set('n', '<leader>v', ':lua require("nvim-pvg").search()<cr>', { desc = 'pvg' })
+
+-- chatgpt
+vim.keymap.set("n", "<leader>o", function()
+  require("chatgpt").openChat()
+end, { desc = "chatgpt" })
 
