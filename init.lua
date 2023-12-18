@@ -74,10 +74,21 @@ vim.keymap.set("n", "<leader>'", "ciw''<ESC>P", { desc = "Surround word with sin
 vim.keymap.set("n", '<leader>"', 'ciw""<ESC>P', { desc = "Surround word with double quotes" })
 
 -- terminal
+vim.opt.scrollback = 50000
 vim.o.shell = "bash -l" -- use "login" bash to source .bash_profile
 -- vim.o.shell = "/Applications/fish.app/Contents/Resources/base/usr/local/bin/fish"
-vim.keymap.set('n', '<leader>t', ':term<cr>', { desc = 'Terminal' })
+vim.keymap.set('n', '<leader>t', function()
+  vim.cmd('term')
+  vim.wait(1)
+  vim.cmd('startinsert')
+end, { desc = 'Terminal' })
 vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', { desc = 'Exit insert mode in terminal' })
+vim.keymap.set('t', '<C-k>', function()
+  vim.fn.feedkeys("", 'n')
+  local sb = vim.bo.scrollback
+  vim.bo.scrollback = 1
+  vim.bo.scrollback = sb
+end, { desc = 'Clear terminal' })
 vim.cmd [[
   augroup terminal
     autocmd!
@@ -189,9 +200,22 @@ vim.keymap.set('n', '<leader>x', function()
   conflicts()
 end, { desc = 'Open all files with git merge conflicts' })
 
-vim.keymap.set('n', '<leader>gs', ':term gs<cr>', { desc = 'Git status' })
+vim.keymap.set('n', '<leader>gs', ':term git status<cr>', { desc = 'Git status' })
+-- vim.keymap.set('n', '<leader>gs', function()
+  -- open a terminal buffer and give it time to load and run bash_profile
+  -- then run "git status" and press enter
+  -- vim.cmd('term')
+  -- vim.wait(1)
+  -- vim.cmd('startinsert')
+  -- vim.api.nvim_feedkeys('gs', 'n', true)
+  -- local cr = vim.api.nvim_replace_termcodes('<cr>', true, false, true)
+  -- vim.api.nvim_feedkeys(cr, 'n', false)
+  -- enter the text 'git status' and press enter
+-- end, { desc = 'Git status' })
 
-vim.keymap.set('n', '<leader>gd', ':term gd<cr>', { desc = 'Git diff' })
+vim.keymap.set('n', '<leader>gd', function()
+  vim.cmd('Git diff')
+end, { desc = 'Git diff' })
 
 vim.keymap.set('n', '<leader>gc', function()
   vim.cmd('vsplit')
@@ -202,7 +226,9 @@ vim.keymap.set('n', '<leader>gc', function()
   vim.api.nvim_win_close(current_win, false)
 end, { desc = 'Git commit' })
 
-vim.keymap.set('n', '<leader>gp', ':term gp<cr>', { desc = 'Git push' })
+vim.keymap.set('n', '<leader>gp', function()
+  vim.cmd('Git push')
+end, { desc = 'Git push' })
 
 
 -- test
@@ -226,4 +252,9 @@ vim.keymap.set('n', '<leader>v', ':lua require("nvim-pvg").search()<cr>', { desc
 vim.keymap.set("n", "<leader>o", function()
   require("chatgpt").openChat()
 end, { desc = "chatgpt" })
+
+-- copilot
+vim.keymap.set("n", "<leader>l", function()
+  vim.cmd("Copilot panel")
+end, { desc = "Copilot Panel" })
 

@@ -22,9 +22,9 @@ require('telescope').setup({
       "--with-filename",
       "--line-number",
       "--column",
-      "--ignore-case"
-    }
-    --    file_ignore_patterns = '',
+      "--ignore-case",
+      -- "--no-ignore",
+    },
   },
   pickers = {
     find_files = {
@@ -37,7 +37,10 @@ require('telescope').setup({
   extensions = {},
 })
 
+-- Examples
 -- :lua require('telescope.builtin').live_grep({ cwd = .github })
+-- :lua require('telescope.builtin').live_grep({ glob_pattern = "!yarn.lock" })
+-- :lua require('telescope.builtin').live_grep({ glob_pattern = "!node_modules", hidden = false })
 -- :lua require('telescope.builtin').find_files({ cwd = 'src/js/openapi', no_ignore = true })
 
 -- builtin.live_grep({opts})                      *telescope.builtin.live_grep()*
