@@ -250,7 +250,8 @@ vim.keymap.set('n', '<leader>v', ':lua require("nvim-pvg").search()<cr>', { desc
 
 -- chatgpt
 vim.keymap.set("n", "<leader>o", function()
-  require("chatgpt").openChat()
+  local gpt = require("chatgpt")
+  gpt.openChat()
 end, { desc = "chatgpt" })
 
 -- copilot

@@ -143,15 +143,7 @@ return require('packer').startup {
       end,
     }
 
-    use {
-      'nvim-pack/nvim-spectre',
-      requires = { 'nvim-lua/plenary.nvim' },
-      config = function()
-        require('configs.spectre')
-      end,
-    }
-
-    use '~/src/nvim-pvg'
+    use '~/src/nvim-pvg' -- personalized vim grep
 
     use 'MunifTanjim/nui.nvim'
 
