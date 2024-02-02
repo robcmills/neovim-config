@@ -59,6 +59,7 @@ lspconfig.util.default_config = vim.tbl_deep_extend(
 )
 
 -- setup servers
+
 lspconfig.eslint.setup {}
 
 lspconfig.jsonls.setup {}
@@ -116,6 +117,9 @@ lspconfig.cssls.setup {
 }
 
 -- lspconfig.tailwindcss.setup {}
+
+-- lspconfig.kotlin_language_server.setup {}
+
 
 -- diagnostics
 local signs = {

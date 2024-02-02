@@ -179,9 +179,46 @@ vim.opt.spellsuggest = 'best,9'
 
 -- lsp see lua/configs/lsp.lua
 
--- vim.api.nvim_create_autocmd('BufReadPost', { pattern = '*.overlay', command = 'set syntax=c'})
+-- Function to open a new buffer and write LSP References
+vim.keymap.set('n', '<leader>ld', function()
+  local function on_list(list)
+    local lines = {}
+    local seen = {}
+    local prefix = "^/Users/robcmills/src/openspace/web/icedemon/"
+
+    for _, item in ipairs(list.items) do
+      local path = string.gsub(item.filename, prefix, "")
+      if not seen[path] then
+        seen[path] = true
+        table.insert(lines, path)
+      end
+    end
+
+    local bufnr = vim.api.nvim_create_buf(true, false)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+    vim.api.nvim_buf_set_name(bufnr, 'References')
+    vim.api.nvim_set_current_buf(bufnr)
+  end
+  vim.lsp.buf.references(nil, { on_list = on_list })
+end, { desc = 'Dump lsp references' })
+
+-- Open a new buffer and write qflist
+vim.keymap.set('n', '<leader>lg', function()
+  local qflist = vim.fn.getqflist()
+  local lines = {}
+  for _, qf in ipairs(qflist) do
+    local filepath = vim.fn.bufname(qf.bufnr)
+    table.insert(lines, string.format("%s|%s", filepath, qf.text))
+  end
+  local bufnr = vim.api.nvim_create_buf(true, false)
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  vim.api.nvim_buf_set_name(bufnr, 'qflist')
+  vim.api.nvim_set_current_buf(bufnr)
+  vim.api.nvim_buf_set_option(0, 'filetype', 'qf')
+end, { desc = 'Dump qflist' })
 
 -- git
+
 local function conflicts()
   local command = 'git diff --name-only --diff-filter=U'
   local list = vim.fn.system(command)
@@ -201,17 +238,6 @@ vim.keymap.set('n', '<leader>x', function()
 end, { desc = 'Open all files with git merge conflicts' })
 
 vim.keymap.set('n', '<leader>gs', ':term git status<cr>', { desc = 'Git status' })
--- vim.keymap.set('n', '<leader>gs', function()
-  -- open a terminal buffer and give it time to load and run bash_profile
-  -- then run "git status" and press enter
-  -- vim.cmd('term')
-  -- vim.wait(1)
-  -- vim.cmd('startinsert')
-  -- vim.api.nvim_feedkeys('gs', 'n', true)
-  -- local cr = vim.api.nvim_replace_termcodes('<cr>', true, false, true)
-  -- vim.api.nvim_feedkeys(cr, 'n', false)
-  -- enter the text 'git status' and press enter
--- end, { desc = 'Git status' })
 
 vim.keymap.set('n', '<leader>gd', function()
   vim.cmd('Git diff')
@@ -231,12 +257,18 @@ vim.keymap.set('n', '<leader>gp', function()
 end, { desc = 'Git push' })
 
 
--- test
-
 -- Treat .ejs files as .html
-vim.api.nvim_exec([[
-  au BufRead,BufNewFile *.ejs set filetype=html
-]], false)
+vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
+  pattern = "*.ejs",
+  command = "set filetype=html",
+})
+
+-- Treat .frag and .vert shader files as .glsl
+vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
+   pattern = { "*.frag", "*.vert" },
+   command = "set filetype=glsl",
+})
+
 
 -- Global find and replace (preview)
 -- ! grep -rl --exclude-dir=node_modules "i18next-init" ./ | xargs sed -n 's/i18next-init/i18next-init-with-translations/gp'

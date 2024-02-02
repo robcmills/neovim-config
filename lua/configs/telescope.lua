@@ -15,6 +15,12 @@ require('telescope').setup({
       height = 0.99,
       preview_cutoff = 120,
     },
+    mappings = {
+      i = {
+        ["<C-n>"] = require('telescope.actions').cycle_history_next,
+        ["<C-e>"] = require('telescope.actions').cycle_history_prev,
+      },
+    },
     vimgrep_arguments = {
       "rg",
       "--color=never",
@@ -36,6 +42,9 @@ require('telescope').setup({
   },
   extensions = {},
 })
+
+-- Default Mappings
+-- <C-q> Send all items not filtered to quickfixlist (qflist)
 
 -- Examples
 -- :lua require('telescope.builtin').live_grep({ cwd = .github })
