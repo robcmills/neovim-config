@@ -202,13 +202,18 @@ vim.keymap.set('n', '<leader>ld', function()
   vim.lsp.buf.references(nil, { on_list = on_list })
 end, { desc = 'Dump lsp references' })
 
+
+local function trim(s)
+  return (s:gsub("^%s*(.-)%s*$", "%1"))
+end
+
 -- Open a new buffer and write qflist
 vim.keymap.set('n', '<leader>lg', function()
   local qflist = vim.fn.getqflist()
   local lines = {}
   for _, qf in ipairs(qflist) do
     local filepath = vim.fn.bufname(qf.bufnr)
-    table.insert(lines, string.format("%s|%s", filepath, qf.text))
+    table.insert(lines, string.format("%s:%s:%s | %s", filepath, qf.lnum, qf.col, trim(qf.text)))
   end
   local bufnr = vim.api.nvim_create_buf(true, false)
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
