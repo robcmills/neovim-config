@@ -1,3 +1,13 @@
+local sorters = require('telescope.sorters')
+
+local git_sorter = sorters.Sorter:new({
+  scoring_function = function(_, prompt, line, entry)
+    print('line', vim.inspect(line))
+    print('entry', vim.inspect(entry))
+    return -string.len(line)
+  end
+})
+
 require('telescope').setup({
   defaults = {
     prompt_prefix = '   ',
@@ -36,6 +46,9 @@ require('telescope').setup({
     find_files = {
       hidden = true,
     },
+    live_grep = {
+      -- sorter = git_sorter,
+    },
     lsp_references = {
       show_line = false
     },
@@ -64,3 +77,14 @@ require('telescope').setup({
   -- {max_results}         (number)          define a upper result value
   -- {disable_coordinates} (boolean)         don't show the line & row numbers (default: false)
   -- {file_encoding}       (string)          file encoding for the entry & previewer
+
+--                                     *telescope.defaults.generic_sorter*
+-- generic_sorter:
+--     A function pointer to the generic sorter. The sorter that should be
+--     used for everything that is not a file.
+--     Hint: If you load a native sorter, you don't need to change this value,
+--     the native sorter will override it anyway.
+--
+--     Default: require("telescope.sorters").get_fzy_sorter
+--
+--                                   *telescope.defaults.prefilter_sorter*

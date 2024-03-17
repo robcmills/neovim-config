@@ -7,6 +7,36 @@ local on_attach = function(_, bufnr)
   map("n", "<leader>la", function()
     vim.lsp.buf.code_action()
   end, { desc = "LSP code action", buffer = bufnr })
+
+  map("n", "<leader>li", function()
+    local method = vim.lsp.protocol.Methods.textDocument_codeAction
+    local params = vim.lsp.util.make_range_params()
+    params.context = {
+      only = { "source.addMissingImports" },
+      triggerKind = 1
+    }
+    local timeout_ms = 1000
+    local result = vim.lsp.buf_request_sync(bufnr, method, params, timeout_ms)
+    if not result or vim.tbl_isempty(result) then
+      return
+    end
+    for _, res in pairs(result) do
+        for _, r in pairs(res.result or {}) do
+            if r.edit then
+                vim.lsp.util.apply_workspace_edit(r.edit, "UTF-8")
+            end
+        end
+    end
+
+    -- Shorter version but is async
+    -- vim.lsp.buf.code_action({
+    --   context = { only = { "source.addMissingImports" } },
+    --   apply = true,
+    -- })
+
+    vim.cmd('EslintFixAll')
+  end, { desc = "Auto import", buffer = bufnr })
+
   map("n", "<leader>lf", function()
     vim.lsp.buf.formatting_sync()
   end, { desc = "Format code", buffer = bufnr })
@@ -82,6 +112,13 @@ lspconfig.lua_ls.setup {
       diagnostics = {
         globals = { "use", "vim", 'hs' },
       },
+      runtime = {
+        version = 'LuaJIT',
+      },
+      workspace = {
+        checkThirdParty = false,
+        library = { vim.env.VIMRUNTIME },
+      }
     },
   },
 }
