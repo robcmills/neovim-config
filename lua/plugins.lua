@@ -128,14 +128,6 @@ return require('packer').startup {
     }
 
     use {
-      'windwp/nvim-autopairs',
-      after = 'nvim-treesitter',
-      config = function()
-        require 'configs.autopairs'
-      end,
-    }
-
-    use {
       'windwp/nvim-ts-autotag',
       after = 'nvim-treesitter',
       config = function()
@@ -143,7 +135,7 @@ return require('packer').startup {
       end,
     }
 
-    use '~/src/nvim-pvg' -- personalized vim grep
+    -- use '~/src/nvim-pvg' -- personalized vim grep
 
     use 'MunifTanjim/nui.nvim'
 

@@ -8,6 +8,28 @@ local on_attach = function(_, bufnr)
     vim.lsp.buf.code_action()
   end, { desc = "LSP code action", buffer = bufnr })
 
+  map("n", "<leader>lm", function()
+    local method = vim.lsp.protocol.Methods.textDocument_codeAction
+    local params = vim.lsp.util.make_range_params()
+    params.context = {
+      only = { "source.removeUnusedImports" },
+      triggerKind = 1
+    }
+    local timeout_ms = 1000
+    local result = vim.lsp.buf_request_sync(bufnr, method, params, timeout_ms)
+    if not result or vim.tbl_isempty(result) then
+      return
+    end
+    for _, res in pairs(result) do
+        for _, r in pairs(res.result or {}) do
+            if r.edit then
+                vim.lsp.util.apply_workspace_edit(r.edit, "UTF-8")
+            end
+        end
+    end
+    vim.cmd('EslintFixAll')
+  end, { desc = "Remove unused imports", buffer = bufnr })
+
   map("n", "<leader>li", function()
     local method = vim.lsp.protocol.Methods.textDocument_codeAction
     local params = vim.lsp.util.make_range_params()

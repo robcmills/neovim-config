@@ -72,6 +72,8 @@ vim.keymap.set("n", "<leader>h", "<cmd>nohlsearch<cr>", { desc = "No Highlight" 
 vim.keymap.set("n", "<leader>A", "gg0vG$y", { desc = "Copy all" })
 vim.keymap.set("n", "<leader>'", "ciw''<ESC>P", { desc = "Surround word with single quotes" })
 vim.keymap.set("n", '<leader>"', 'ciw""<ESC>P', { desc = "Surround word with double quotes" })
+vim.keymap.set("n", '<leader>(', 'ciw()<ESC>P', { desc = "Surround word with parens" })
+vim.keymap.set("n", '<leader>{', 'ciw{}<ESC>P', { desc = "Surround word with curly brackets" })
 
 -- terminal
 vim.opt.scrollback = 50000
@@ -208,6 +210,7 @@ local function trim(s)
 end
 
 -- Open a new buffer and write qflist
+-- To dump telecope results into qflist, in normal mode use `ctrl + q` (twice)
 vim.keymap.set('n', '<leader>lg', function()
   local qflist = vim.fn.getqflist()
   local lines = {}
@@ -292,7 +295,23 @@ vim.keymap.set("n", "<leader>o", function()
 end, { desc = "chatgpt" })
 
 -- copilot
-vim.keymap.set("n", "<leader>l", function()
+vim.keymap.set("i", "<C-l>", function()
   vim.cmd("Copilot panel")
 end, { desc = "Copilot Panel" })
+
+-- sessions
+
+-- save session
+-- :mksession! ~/.config/nvim/sessions/session-name.vim
+
+-- load session
+-- :source ~/.config/nvim/sessions/session-name.vim
+
+-- set window size
+-- first set "fixed" height so changes persist
+-- :setlocal winfixheight
+-- then set height
+-- :resize 20
+-- or width
+-- :vertical resize 80
 
