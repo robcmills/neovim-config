@@ -151,6 +151,11 @@ return require('packer').startup {
       }
     }
 
+    -- dadbod (database client)
+    use 'tpope/vim-dadbod'
+    use 'kristijanhusak/vim-dadbod-completion'
+    use 'kristijanhusak/vim-dadbod-ui'
+
   end,
   config = {
     display = {
