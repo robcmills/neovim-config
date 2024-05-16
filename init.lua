@@ -34,6 +34,7 @@ vim.opt.cursorline = true
 vim.opt.fillchars = {
   eob = " ", -- disable `~` on nonexistent lines
   vert = '│', -- window vertical separator character
+  vertright = '─',
 }
 vim.opt.ignorecase = true -- case insensitive search
 vim.opt.number = true -- show line numbers
