@@ -68,7 +68,8 @@ vim.keymap.set("n", "U", "<C-r>", { desc = "Redo" })
 vim.keymap.set("n", "<C-j>", "gJi <ESC>ciW <ESC>", { desc = "Join lines (and remove excess whitespace)" })
 vim.keymap.set("n", "s", "<cmd>wa<cr>", { desc = "Save" })
 vim.keymap.set("n", "<leader>yf", ":let @+ = expand('%')<cr>", { desc = "Copy current buffer filepath" })
-vim.keymap.set("n", "<leader>q", ":qa<cr>", { desc = "Quit" })
+vim.keymap.set("n", "<leader>q", ":qa<cr>", { desc = "Quit all" })
+vim.keymap.set("n", "<C-q>", ":q<cr>", { desc = "Quit" })
 vim.keymap.set("n", "<leader>h", "<cmd>nohlsearch<cr>", { desc = "No Highlight" })
 vim.keymap.set("n", "<leader>A", "gg0vG$y", { desc = "Copy all" })
 vim.keymap.set("n", "<leader>'", "ciw''<ESC>P", { desc = "Surround word with single quotes" })
@@ -310,7 +311,7 @@ end, { desc = "Copilot Panel" })
 
 -- set window size
 -- first set "fixed" height so changes persist
--- :setlocal winfixheight
+-- :setlocal winfixheight / winfixwidth
 -- then set height
 -- :resize 20
 -- or width
