@@ -59,6 +59,8 @@ vim.opt.grepprg = "rg --vimgrep --no-heading --smart-case"
 vim.opt.foldmethod = "indent"
 vim.opt.foldlevel = 99
 
+vim.opt.directory = vim.fn.expand('$HOME/.local/state/nvim/swap//')
+
 -- key bindings
 vim.g.mapleader = " "
 vim.keymap.set("", "<Space>", "<Nop>") -- disable space because leader
@@ -286,6 +288,11 @@ vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
 -- Global find and replace (commit)
 -- ! grep -rl --exclude-dir=node_modules "i18next-init" ./ | xargs sed -i 's/i18next-init/i18next-init-with-translations/gp'
 
+-- arglist
+-- :arg *.html - Populate the arglist with all html files in the current working directory, and edit the first one.
+-- :argadd *.twig - Add twig files to the arglist.
+-- :argdo %s/pattern/replace/ge | update - Replace pattern in every file of the arglist.
+
 
 -- nvim-pvg
 vim.keymap.set('n', '<leader>v', ':lua require("nvim-pvg").search()<cr>', { desc = 'pvg' })
@@ -317,3 +324,9 @@ end, { desc = "Copilot Panel" })
 -- or width
 -- :vertical resize 80
 
+-- open command-line window (to see history of commands)
+-- :<C-f>
+-- optionally filter history
+-- :filter /s/
+-- yank to system clipboard
+-- "*y

@@ -60,7 +60,7 @@ require('telescope').setup({
 -- <C-q> Send all items not filtered to quickfixlist (qflist)
 
 -- Examples
--- :lua require('telescope.builtin').live_grep({ cwd = .github })
+-- :lua require('telescope.builtin').live_grep({ cwd = '.github' })
 -- :lua require('telescope.builtin').live_grep({ glob_pattern = "!yarn.lock" })
 -- :lua require('telescope.builtin').live_grep({ glob_pattern = "!node_modules", hidden = false })
 -- :lua require('telescope.builtin').find_files({ cwd = 'src/js/openapi', no_ignore = true })

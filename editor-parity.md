@@ -1,6 +1,12 @@
+### Todo
+
+- [ ] rename file (and all imports)
+
+
 ### embedded terminal
 
-- [ ] execute a command and dump output into a new buffer
+- [x] execute a command and dump output into a new buffer
+  + <leader>t opens native built-in terminal which I've configured the way I like
 
 
 ### telescope improvements
