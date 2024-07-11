@@ -8,7 +8,9 @@ local git_sorter = sorters.Sorter:new({
   end
 })
 
-require('telescope').setup({
+local telescope = require('telescope')
+
+telescope.setup({
   defaults = {
     prompt_prefix = '   ',
     selection_caret = '❯ ',
@@ -44,17 +46,23 @@ require('telescope').setup({
   },
   pickers = {
     find_files = {
-      hidden = true,
+      hidden = false,
     },
-    live_grep = {
+    -- live_grep = {
       -- sorter = git_sorter,
-    },
+    -- },
     lsp_references = {
       show_line = false
     },
   },
-  extensions = {},
+  extensions = {
+    fzf = {
+      case_mode = "ignore_case", -- or "smart_case" (default) or "respect_case"
+    },
+  },
 })
+
+telescope.load_extension('fzf')
 
 -- Default Mappings
 -- <C-q> Send all items not filtered to quickfixlist (qflist)

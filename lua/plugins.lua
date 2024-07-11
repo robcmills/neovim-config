@@ -56,9 +56,14 @@ return require('packer').startup {
     }
 
     -- Telescope
+
+    use {
+      'nvim-telescope/telescope-fzf-native.nvim',
+      run = 'make'
+    }
+
     use {
       'nvim-telescope/telescope.nvim',
-      tag = '0.1.2',
       requires = { { 'nvim-lua/plenary.nvim' } },
       cmd = 'Telescope',
       module = 'telescope',
@@ -130,18 +135,6 @@ return require('packer').startup {
     -- use '~/src/nvim-pvg' -- personalized vim grep
 
     use 'MunifTanjim/nui.nvim'
-
-    use {
-      'jackMort/ChatGPT.nvim',
-      config = function()
-        require('configs.chatgpt')
-      end,
-      requires = {
-        'MunifTanjim/nui.nvim',
-        'nvim-lua/plenary.nvim',
-        'nvim-telescope/telescope.nvim'
-      }
-    }
 
     -- dadbod (database client)
     use 'tpope/vim-dadbod'

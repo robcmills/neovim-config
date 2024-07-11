@@ -185,8 +185,25 @@ vim.opt.spellsuggest = 'best,9'
 
 -- lsp see lua/configs/lsp.lua
 
--- Function to open a new buffer and write LSP References
-vim.keymap.set('n', '<leader>ld', function()
+function set_unique_buffer_name(bufnr, base_name)
+  local count = 1
+  local new_name = base_name
+  while true do
+    local success, err = pcall(vim.api.nvim_buf_set_name, bufnr, new_name)
+    if success then
+      break
+    end
+    if err and err:match("Failed to rename buffer") then
+      count = count + 1
+      new_name = base_name .. count
+    else
+      break
+    end
+  end
+end
+
+-- Open a new buffer and write unique LSP References of word under cursor
+vim.api.nvim_create_user_command('Refs', function()
   local function on_list(list)
     local lines = {}
     local seen = {}
@@ -202,11 +219,11 @@ vim.keymap.set('n', '<leader>ld', function()
 
     local bufnr = vim.api.nvim_create_buf(true, false)
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-    vim.api.nvim_buf_set_name(bufnr, 'References')
+    set_unique_buffer_name(bufnr, 'Refs')
     vim.api.nvim_set_current_buf(bufnr)
   end
   vim.lsp.buf.references(nil, { on_list = on_list })
-end, { desc = 'Dump lsp references' })
+end, {})
 
 
 local function trim(s)
@@ -215,7 +232,7 @@ end
 
 -- Open a new buffer and write qflist
 -- To dump telecope results into qflist, in normal mode use `ctrl + q` (twice)
-vim.keymap.set('n', '<leader>lg', function()
+vim.api.nvim_create_user_command('Qf', function()
   local qflist = vim.fn.getqflist()
   local lines = {}
   for _, qf in ipairs(qflist) do
@@ -224,10 +241,10 @@ vim.keymap.set('n', '<leader>lg', function()
   end
   local bufnr = vim.api.nvim_create_buf(true, false)
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-  vim.api.nvim_buf_set_name(bufnr, 'qflist')
+  set_unique_buffer_name(bufnr, 'qf')
   vim.api.nvim_set_current_buf(bufnr)
-  vim.api.nvim_buf_set_option(0, 'filetype', 'qf')
-end, { desc = 'Dump qflist' })
+  vim.bo[bufnr].filetype = 'qf'
+end, {})
 
 -- git
 
@@ -296,12 +313,6 @@ vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
 
 -- nvim-pvg
 vim.keymap.set('n', '<leader>v', ':lua require("nvim-pvg").search()<cr>', { desc = 'pvg' })
-
--- chatgpt
-vim.keymap.set("n", "<leader>o", function()
-  local gpt = require("chatgpt")
-  gpt.openChat()
-end, { desc = "chatgpt" })
 
 -- copilot
 vim.keymap.set("i", "<C-l>", function()
