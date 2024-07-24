@@ -64,6 +64,7 @@ return require('packer').startup {
 
     use {
       'nvim-telescope/telescope.nvim',
+      tag = '0.1.8',
       requires = { { 'nvim-lua/plenary.nvim' } },
       cmd = 'Telescope',
       module = 'telescope',

@@ -72,7 +72,7 @@ vim.keymap.set("n", "s", "<cmd>wa<cr>", { desc = "Save" })
 vim.keymap.set("n", "<leader>yf", ":let @+ = expand('%')<cr>", { desc = "Copy current buffer filepath" })
 vim.keymap.set("n", "<leader>q", ":qa<cr>", { desc = "Quit all" })
 vim.keymap.set("n", "<C-q>", ":q<cr>", { desc = "Quit" })
-vim.keymap.set("n", "<leader>h", "<cmd>nohlsearch<cr>", { desc = "No Highlight" })
+vim.keymap.set("n", "<leader>h", ":nohlsearch<cr>", { desc = "No Highlight" })
 vim.keymap.set("n", "<leader>A", "gg0vG$y", { desc = "Copy all" })
 vim.keymap.set("n", "<leader>'", "ciw''<ESC>P", { desc = "Surround word with single quotes" })
 vim.keymap.set("n", '<leader>"', 'ciw""<ESC>P', { desc = "Surround word with double quotes" })
@@ -245,6 +245,17 @@ vim.api.nvim_create_user_command('Qf', function()
   vim.api.nvim_set_current_buf(bufnr)
   vim.bo[bufnr].filetype = 'qf'
 end, {})
+
+-- Open a new buffer and write diagnostics from current buffer
+vim.api.nvim_create_user_command('Diagnostics', function()
+  local diagnostics = vim.inspect(vim.diagnostic.get(0))
+  local lines = vim.split(diagnostics, '\n')
+  local bufnr = vim.api.nvim_create_buf(true, false)
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  set_unique_buffer_name(bufnr, 'Diagnostics')
+  vim.api.nvim_set_current_buf(bufnr)
+end, {})
+
 
 -- git
 
