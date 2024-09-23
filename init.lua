@@ -305,10 +305,9 @@ vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
 
 -- Treat .frag and .vert shader files as .glsl
 vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
-   pattern = { "*.frag", "*.vert" },
-   command = "set filetype=glsl",
+  pattern = { "*.frag", "*.vert" },
+  command = "set filetype=glsl",
 })
-
 
 -- Global find and replace (preview)
 -- ! grep -rl --exclude-dir=node_modules "i18next-init" ./ | xargs sed -n 's/i18next-init/i18next-init-with-translations/gp'
@@ -352,3 +351,7 @@ end, { desc = "Copilot Panel" })
 -- :filter /s/
 -- yank to system clipboard
 -- "*y
+
+-- fix gf: ensure path is correct
+-- :set path? -- to see current path
+-- :set path=.,** -- to add current directory and all subdirectories
