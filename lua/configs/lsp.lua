@@ -134,6 +134,13 @@ lspconfig.lua_ls.setup {
       diagnostics = {
         globals = { "use", "vim", 'hs' },
       },
+      format = {
+        enable = true,
+        defaultConfig = {
+          indent_style = "space",
+          indent_size = "2",
+        },
+      },
       runtime = {
         version = 'LuaJIT',
       },
@@ -145,7 +152,7 @@ lspconfig.lua_ls.setup {
   },
 }
 
-lspconfig.tsserver.setup {
+lspconfig.ts_ls.setup {
   cmd = {
     'typescript-language-server',
     '--stdio',

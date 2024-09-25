@@ -5,8 +5,6 @@ return require('packer').startup {
     -- colorscheme
     use 'folke/tokyonight.nvim'
 
-    use 'github/copilot.vim'
-
     use {
       'nvim-treesitter/nvim-treesitter',
       run = ':TSUpdate',
@@ -141,6 +139,16 @@ return require('packer').startup {
     use 'tpope/vim-dadbod'
     use 'kristijanhusak/vim-dadbod-completion'
     use 'kristijanhusak/vim-dadbod-ui'
+
+    -- disabled while I try supermaven
+    -- use 'github/copilot.vim'
+
+    use {
+      'supermaven-inc/supermaven-nvim',
+      config = function()
+        require('configs/maven')
+      end,
+    }
 
   end,
   config = {
