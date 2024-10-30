@@ -60,7 +60,7 @@ local on_attach = function(_, bufnr)
   end, { desc = "Auto import", buffer = bufnr })
 
   map("n", "<leader>lf", function()
-    vim.lsp.buf.formatting_sync()
+    vim.lsp.buf.format()
   end, { desc = "Format code", buffer = bufnr })
   map("n", "<leader>lh", function()
     vim.lsp.buf.signature_help()

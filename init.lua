@@ -296,6 +296,10 @@ vim.keymap.set('n', '<leader>gp', function()
   vim.cmd('Git push')
 end, { desc = 'Git push' })
 
+vim.keymap.set('n', '<leader>gmv', function()
+  vim.cmd('Git merge development')
+end, { desc = 'Git merge development' })
+
 
 -- Treat .ejs files as .html
 vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
@@ -355,3 +359,4 @@ end, { desc = "Copilot Panel" })
 -- fix gf: ensure path is correct
 -- :set path? -- to see current path
 -- :set path=.,** -- to add current directory and all subdirectories
+

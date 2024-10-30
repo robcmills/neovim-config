@@ -146,20 +146,38 @@ return require('packer').startup {
     use {
       'supermaven-inc/supermaven-nvim',
       config = function()
-        require('configs/maven')
+        require('configs.maven')
       end,
     }
 
-    use({
+    use {
       'MeanderingProgrammer/render-markdown.nvim',
+      ft = { 'markdown', 'Avante' },
       after = { 'nvim-treesitter' },
-      -- requires = { 'echasnovski/mini.nvim', opt = true }, -- if you use the mini.nvim suite
-      -- requires = { 'echasnovski/mini.icons', opt = true }, -- if you use standalone mini plugins
-      requires = { 'nvim-tree/nvim-web-devicons', opt = true }, -- if you prefer nvim-web-devicons
+      requires = { 'nvim-tree/nvim-web-devicons', opt = true },
       config = function()
-          require('render-markdown').setup({})
-      end,
+          require('render-markdown').setup({
+            file_types = { 'markdown', 'Avante' },
     })
+      end,
+    }
+
+    use 'stevearc/dressing.nvim'
+
+    use {
+      'yetone/avante.nvim',
+      requires = {
+        'stevearc/dressing.nvim',
+        'nvim-lua/plenary.nvim',
+        'MunifTanjim/nui.nvim',
+        --- The below dependencies are optional,
+        'nvim-tree/nvim-web-devicons',
+        'MeanderingProgrammer/render-markdown.nvim',
+      },
+      config = function()
+          require('configs.avante')
+      end,
+    }
 
   end,
   config = {
