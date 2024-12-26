@@ -1,5 +1,52 @@
 local map = vim.keymap.set
 
+local remove_unused_imports = function(bufnr)
+  local method = vim.lsp.protocol.Methods.textDocument_codeAction
+  local params = vim.lsp.util.make_range_params()
+  params.context = {
+    only = { "source.removeUnusedImports" },
+    triggerKind = 1
+  }
+  local timeout_ms = 1000
+  local result = vim.lsp.buf_request_sync(bufnr, method, params, timeout_ms)
+  if not result or vim.tbl_isempty(result) then
+    return
+  end
+  for _, res in pairs(result) do
+      for _, r in pairs(res.result or {}) do
+          if r.edit then
+              vim.lsp.util.apply_workspace_edit(r.edit, "UTF-8")
+          end
+      end
+  end
+end
+
+local add_missing_imports = function(bufnr)
+  local method = vim.lsp.protocol.Methods.textDocument_codeAction
+  local params = vim.lsp.util.make_range_params()
+  params.context = {
+    only = { "source.addMissingImports" },
+    triggerKind = 1
+  }
+  local timeout_ms = 1000
+  local result = vim.lsp.buf_request_sync(bufnr, method, params, timeout_ms)
+  if not result or vim.tbl_isempty(result) then
+    return
+  end
+  for _, res in pairs(result) do
+      for _, r in pairs(res.result or {}) do
+          if r.edit then
+              vim.lsp.util.apply_workspace_edit(r.edit, "UTF-8")
+          end
+      end
+  end
+  -- Shorter version but is async
+  -- vim.lsp.buf.code_action({
+  --   context = { only = { "source.addMissingImports" } },
+  --   apply = true,
+  -- })
+end
+
 local on_attach = function(_, bufnr)
   map("n", "<leader>k", function()
     vim.lsp.buf.hover()
@@ -8,56 +55,14 @@ local on_attach = function(_, bufnr)
     vim.lsp.buf.code_action()
   end, { desc = "LSP code action", buffer = bufnr })
 
-  map("n", "<leader>lm", function()
-    local method = vim.lsp.protocol.Methods.textDocument_codeAction
-    local params = vim.lsp.util.make_range_params()
-    params.context = {
-      only = { "source.removeUnusedImports" },
-      triggerKind = 1
-    }
-    local timeout_ms = 1000
-    local result = vim.lsp.buf_request_sync(bufnr, method, params, timeout_ms)
-    if not result or vim.tbl_isempty(result) then
-      return
-    end
-    for _, res in pairs(result) do
-        for _, r in pairs(res.result or {}) do
-            if r.edit then
-                vim.lsp.util.apply_workspace_edit(r.edit, "UTF-8")
-            end
-        end
-    end
+  map("n", "<leader>a", function()
     vim.cmd('EslintFixAll')
-  end, { desc = "Remove unused imports", buffer = bufnr })
+  end, { desc = "Fix all" })
 
   map("n", "<leader>li", function()
-    local method = vim.lsp.protocol.Methods.textDocument_codeAction
-    local params = vim.lsp.util.make_range_params()
-    params.context = {
-      only = { "source.addMissingImports" },
-      triggerKind = 1
-    }
-    local timeout_ms = 1000
-    local result = vim.lsp.buf_request_sync(bufnr, method, params, timeout_ms)
-    if not result or vim.tbl_isempty(result) then
-      return
-    end
-    for _, res in pairs(result) do
-        for _, r in pairs(res.result or {}) do
-            if r.edit then
-                vim.lsp.util.apply_workspace_edit(r.edit, "UTF-8")
-            end
-        end
-    end
-
-    -- Shorter version but is async
-    -- vim.lsp.buf.code_action({
-    --   context = { only = { "source.addMissingImports" } },
-    --   apply = true,
-    -- })
-
-    vim.cmd('EslintFixAll')
-  end, { desc = "Auto import", buffer = bufnr })
+    remove_unused_imports(bufnr)
+    add_missing_imports(bufnr)
+  end, { desc = "Fix imports" })
 
   map("n", "<leader>lf", function()
     vim.lsp.buf.format()
@@ -115,6 +120,8 @@ lspconfig.util.default_config = vim.tbl_deep_extend(
 lspconfig.eslint.setup {}
 
 lspconfig.jsonls.setup {}
+
+lspconfig.jedi_language_server.setup {}
 
 lspconfig.sqlls.setup {}
 

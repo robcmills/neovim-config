@@ -169,9 +169,6 @@ vim.keymap.set("n", "<leader>/", function()
 end, { desc = "Comment line" })
 vim.keymap.set('x', '<leader>/', '<esc><cmd>lua require("Comment.api").toggle.linewise(vim.fn.visualmode())<cr>')
 
--- eslint
-vim.keymap.set("n", "<leader>a", ":EslintFixAll<cr>", { desc = "EslintFixAll" })
-
 -- spell check
 vim.keymap.set('n', '<leader>s', function()
   vim.notify('spell')
@@ -300,6 +297,8 @@ vim.keymap.set('n', '<leader>gmv', function()
   vim.cmd('Git merge development')
 end, { desc = 'Git merge development' })
 
+vim.keymap.set("n", "<leader>gf", ":DiffviewOpen<cr>", { desc = "DiffviewOpen" })
+
 
 -- Treat .ejs files as .html
 vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
@@ -311,6 +310,14 @@ vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
 vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
   pattern = { "*.frag", "*.vert" },
   command = "set filetype=glsl",
+})
+
+vim.api.nvim_create_autocmd('TextYankPost', {
+  desc = 'Highlight yanked text',
+  group = vim.api.nvim_create_augroup('highlight_yank', { clear = true }),
+  callback = function()
+    vim.highlight.on_yank()
+  end,
 })
 
 -- Global find and replace (preview)
@@ -360,3 +367,6 @@ end, { desc = "Copilot Panel" })
 -- :set path? -- to see current path
 -- :set path=.,** -- to add current directory and all subdirectories
 
+-- execute lua
+vim.keymap.set('n', '<space>x', ':.lua<cr>', { desc = 'Execute current line of lua' })
+vim.keymap.set('v', '<space>x', ':lua<cr>', { desc = 'Execute selected lua' })
