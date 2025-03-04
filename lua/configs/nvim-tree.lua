@@ -72,7 +72,10 @@ local function on_attach(bufnr)
 end
 
 
-require 'nvim-tree'.setup {
+require('nvim-tree').setup({
+  git = {
+    enable = false,
+  },
   on_attach = on_attach,
   hijack_unnamed_buffer_when_opening = true,
   update_focused_file = { enable = true },
@@ -97,7 +100,7 @@ require 'nvim-tree'.setup {
     centralize_selection = true,
     side = 'left',
   },
-}
+})
 
 local function open_nvim_tree(data)
   local api = require("nvim-tree.api")

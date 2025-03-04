@@ -182,7 +182,7 @@ vim.opt.spellsuggest = 'best,9'
 
 -- lsp see lua/configs/lsp.lua
 
-function set_unique_buffer_name(bufnr, base_name)
+local function set_unique_buffer_name(bufnr, base_name)
   local count = 1
   local new_name = base_name
   while true do
@@ -368,5 +368,5 @@ end, { desc = "Copilot Panel" })
 -- :set path=.,** -- to add current directory and all subdirectories
 
 -- execute lua
-vim.keymap.set('n', '<space>x', ':.lua<cr>', { desc = 'Execute current line of lua' })
-vim.keymap.set('v', '<space>x', ':lua<cr>', { desc = 'Execute selected lua' })
+-- vim.keymap.set('n', '<leader>x', ':.lua<cr>', { desc = 'Execute current line of lua' })
+-- vim.keymap.set('v', '<leader>x', ':lua<cr>', { desc = 'Execute selected lua' })

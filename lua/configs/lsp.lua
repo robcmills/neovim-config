@@ -60,9 +60,12 @@ local on_attach = function(_, bufnr)
   end, { desc = "Fix all" })
 
   map("n", "<leader>li", function()
-    remove_unused_imports(bufnr)
     add_missing_imports(bufnr)
   end, { desc = "Fix imports" })
+
+  map("n", "<leader>lv", function()
+    remove_unused_imports(bufnr)
+  end, { desc = "Remove unused imports" })
 
   map("n", "<leader>lf", function()
     vim.lsp.buf.format()
@@ -163,8 +166,8 @@ lspconfig.ts_ls.setup {
   cmd = {
     'typescript-language-server',
     '--stdio',
-    -- '--tsserver-log-file', '/Users/robcmills/.cache/nvim/typescript-language-server.log',
-    -- '--tsserver-log-verbosity', 'verbose',
+    -- '--logVerbosity', 'verbose',
+    -- '--logFile', '/Users/robcmills/.cache/nvim/typescript-language-server.log',
     -- '--log-level', '4',
   },
   init_options = {

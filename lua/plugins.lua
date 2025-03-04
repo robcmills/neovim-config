@@ -152,32 +152,17 @@ return require('packer').startup {
 
     use {
       'MeanderingProgrammer/render-markdown.nvim',
-      ft = { 'markdown', 'Avante' },
+      ft = { 'markdown' },
       after = { 'nvim-treesitter' },
       requires = { 'nvim-tree/nvim-web-devicons', opt = true },
       config = function()
           require('render-markdown').setup({
-            file_types = { 'markdown', 'Avante' },
+            file_types = { 'markdown' },
     })
       end,
     }
 
     use 'stevearc/dressing.nvim'
-
-    use {
-      'yetone/avante.nvim',
-      requires = {
-        'stevearc/dressing.nvim',
-        'nvim-lua/plenary.nvim',
-        'MunifTanjim/nui.nvim',
-        --- The below dependencies are optional,
-        'nvim-tree/nvim-web-devicons',
-        'MeanderingProgrammer/render-markdown.nvim',
-      },
-      config = function()
-          require('configs.avante')
-      end,
-    }
 
   end,
   config = {
