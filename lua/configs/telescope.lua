@@ -45,6 +45,24 @@ telescope.setup({
     },
   },
   pickers = {
+    buffers = {
+      layout_config = {
+      vertical = {
+          prompt_position = 'top',
+      },
+      width = 0.75,
+      height = 0.75,
+      },
+      layout_strategy = 'vertical',
+      path_display = function(opts, path)
+        local tail = require("telescope.utils").path_tail(path)
+      path = string.gsub(path, "src/js/", "")
+      path = string.gsub(path, tail .. "$", "")
+        return string.format("%s  |  %s", tail, path)
+      end,
+      show_line = false,
+      sort_lastused = true,
+    },
     find_files = {
       hidden = false,
     },
@@ -70,6 +88,7 @@ telescope.load_extension('fzf')
 -- Examples
 -- :lua require('telescope.builtin').live_grep({ cwd = '.github' })
 -- :lua require('telescope.builtin').live_grep({ cwd = 'e2e' })
+-- :lua require('telescope.builtin').live_grep({ cwd = 'src/js/projects/site/UploadBimTab' })
 -- :lua require('telescope.builtin').live_grep({ glob_pattern = "!yarn.lock" })
 -- :lua require('telescope.builtin').live_grep({ glob_pattern = "!node_modules", hidden = false })
 -- :lua require('telescope.builtin').find_files({ cwd = 'src/js/openapi', no_ignore = true })

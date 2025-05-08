@@ -162,12 +162,13 @@ lspconfig.lua_ls.setup {
   },
 }
 
+vim.lsp.set_log_level("debug")
 lspconfig.ts_ls.setup {
   cmd = {
     'typescript-language-server',
     '--stdio',
+    -- '--logDirectory', '/Users/robcmills/.cache/nvim',
     -- '--logVerbosity', 'verbose',
-    -- '--logFile', '/Users/robcmills/.cache/nvim/typescript-language-server.log',
     -- '--log-level', '4',
   },
   init_options = {

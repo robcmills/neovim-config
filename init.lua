@@ -79,6 +79,25 @@ vim.keymap.set("n", '<leader>"', 'ciw""<ESC>P', { desc = "Surround word with dou
 vim.keymap.set("n", '<leader>(', 'ciw()<ESC>P', { desc = "Surround word with parens" })
 vim.keymap.set("n", '<leader>{', 'ciw{}<ESC>P', { desc = "Surround word with curly brackets" })
 
+vim.keymap.set("n", '<leader>o', function()
+  local line = vim.fn.line('.')
+  local content = vim.fn.getreg('+')
+  local text = "console.log({ " .. content .. " });"
+  vim.api.nvim_buf_set_lines(0, line, line, false, {text})
+  vim.api.nvim_win_set_cursor(0, {line + 1, 0})
+end, { desc = "console.log contents of clipboard" })
+
+local function toggle_boolean()
+  local word = vim.fn.expand("<cword>")
+  if word == "true" then
+    vim.cmd("normal! ciwfalse")
+  elseif word == "false" then
+    vim.cmd("normal! ciwtrue")
+  end
+end
+
+vim.keymap.set('n', '!', toggle_boolean, { desc = 'Toggle Boolean' })
+
 -- terminal
 vim.opt.scrollback = 50000
 vim.o.shell = "bash -l" -- use "login" bash to source .bash_profile
