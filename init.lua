@@ -387,5 +387,5 @@ end, { desc = "Copilot Panel" })
 -- :set path=.,** -- to add current directory and all subdirectories
 
 -- execute lua
--- vim.keymap.set('n', '<leader>x', ':.lua<cr>', { desc = 'Execute current line of lua' })
--- vim.keymap.set('v', '<leader>x', ':lua<cr>', { desc = 'Execute selected lua' })
+vim.keymap.set('n', '<leader>u', ':.lua<cr>', { desc = 'Execute current line of lua' })
+vim.keymap.set('v', '<leader>u', ':lua<cr>', { desc = 'Execute selected lua' })

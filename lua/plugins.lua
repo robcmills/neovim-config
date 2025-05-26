@@ -156,9 +156,9 @@ return require('packer').startup {
       after = { 'nvim-treesitter' },
       requires = { 'nvim-tree/nvim-web-devicons', opt = true },
       config = function()
-          require('render-markdown').setup({
-            file_types = { 'markdown' },
-    })
+        require('render-markdown').setup({
+          file_types = { 'markdown' },
+        })
       end,
     }
 
