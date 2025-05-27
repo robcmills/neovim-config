@@ -1,3 +1,45 @@
+--[[
+A neovim plugin called "vertical-buffers" that renders the open buffers on the right in a vertical split. 
+Inspired by vertical tabs sidebars in some browsers (Arc, Brave).
+
+Current behaviors:
+
+Renders only filenames, unless the filename is index.*, in which case it renders the name of the parent directory like so:
+```
+fileA.ts
+fileB.ts
+ParenDir/index.ts
+```
+
+Each buffer has a "shortcut" letter rendered next to it, like so:
+```
+a fileA.ts
+b fileB.ts
+c ParenDir/index.ts
+```
+When the buffers window is focused, pressing one of the letters should open the corresponding buffer.
+The shortcut letters should be ascending alphabetically based on the order in which the buffers were focused.
+
+It renders buffers top to bottom in the order they were opened by default, but it is modifiable by the user to manually reorder them, and any changes made persist.
+
+It is configurable with custom keybindings.
+
+Buffers window is a configurable fixed width (default 50).
+
+It exposes methods to:
+- show/focus the buffer list
+- hide the buffer list
+
+The code is as simple and minimal as possible.
+The code is written in lua.
+
+TODO:
+  - when deleting a buffer in nvim-tree, if deleted buffer is active, then its window is closed,
+    causing the buffers window to become "full screen" and get into a bad state.
+    Perhaps when selecting a buffer, make a check to see if the "last active" buffer has a window,
+    and if not create one.
+  - show parent dir if a buffer name is duplicated in the list
+]]
 local M = {}
 
 local state = {
@@ -11,7 +53,7 @@ local state = {
       show = "<leader>b",
       hide = "<leader>B",
     },
-    width = 40,
+    width = 50,
   }
 }
 
@@ -138,6 +180,12 @@ local function create_window()
   vim.api.nvim_win_set_buf(state.win, state.buf)
   vim.api.nvim_win_set_width(state.win, state.config.width)
   vim.wo[state.win].winfixwidth = true
+  vim.wo[state.win].number = false
+  vim.wo[state.win].relativenumber = false
+  vim.wo[state.win].signcolumn = "no"
+  vim.wo[state.win].foldcolumn = "0"
+  vim.wo[state.win].list = false
+  vim.wo[state.win].wrap = false
 
   -- Set up keymaps for navigation
   for i = 1, 26 do
