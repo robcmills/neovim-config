@@ -137,6 +137,7 @@ local function create_window()
   state.win = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(state.win, state.buf)
   vim.api.nvim_win_set_width(state.win, state.config.width)
+  vim.wo[state.win].winfixwidth = true
 
   -- Set up keymaps for navigation
   for i = 1, 26 do
