@@ -22,7 +22,12 @@ The shortcut letters should be ascending alphabetically based on the order in wh
 
 It renders buffers top to bottom in the order they were opened by default, but it is modifiable by the user to manually reorder them, and any changes made persist.
 
-It is configurable with custom keybindings.
+Buffer names are colored based on their focus order:
+- Most recently active buffer (a): white (configurable)
+- Previously active buffer (b): soft cyan (configurable)
+- All other buffers: gray (configurable)
+
+It is configurable with custom keybindings and colors.
 
 Buffers window is a configurable fixed width (default 50).
 
@@ -34,12 +39,34 @@ The code is as simple and minimal as possible.
 The code is written in lua.
 
 TODO:
+  - enable modifying buffers list manually (reorder)
+  - on show check for existing buffers window and focus it if it exists
   - when deleting a buffer in nvim-tree, if deleted buffer is active, then its window is closed,
     causing the buffers window to become "full screen" and get into a bad state.
     Perhaps when selecting a buffer, make a check to see if the "last active" buffer has a window,
     and if not create one.
   - show parent dir if a buffer name is duplicated in the list
 ]]
+
+--[[
+Example configuration:
+
+require('buffers').setup({
+  keybindings = {
+    show = "<leader>b",
+    hide = "<leader>B",
+  },
+  width = 50,
+  colors = {
+    active = { link = "Normal" }, -- Most recently active buffer (a)
+    previous = { link = "Title" }, -- Previously active buffer (b)
+    inactive = { link = "Comment" }, -- All other buffers
+  }
+})
+
+Colors values are highlight definition maps (see nvim_set_hl):
+]]
+
 local M = {}
 
 local state = {
@@ -54,8 +81,20 @@ local state = {
       hide = "<leader>B",
     },
     width = 50,
+    colors = {
+      active = { link = "Normal" }, -- Most recently active buffer (a)
+      previous = { link = "Title" }, -- Previously active buffer (b)  
+      inactive = { link = "Comment" }, -- All other buffers
+    }
   }
 }
+
+-- Set up highlight groups for buffer colors
+local function setup_highlights()
+  vim.api.nvim_set_hl(0, "BuffersActive", state.config.colors.active)
+  vim.api.nvim_set_hl(0, "BuffersPrevious", state.config.colors.previous)
+  vim.api.nvim_set_hl(0, "BuffersInactive", state.config.colors.inactive)
+end
 
 -- Get display name for buffer
 local function get_buffer_name(bufnr)
@@ -151,6 +190,46 @@ local function render()
   vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
   vim.bo[state.buf].modifiable = false
 
+  -- Clear existing extmarks
+  vim.api.nvim_buf_clear_namespace(state.buf, -1, 0, -1)
+
+  -- Apply colors based on focus order
+  for line_idx, bufnr in ipairs(buffers) do
+    local name = get_buffer_name(bufnr)
+    local letter = letter_map[bufnr]
+    -- local current = bufnr == vim.api.nvim_get_current_buf() and "*" or " "
+    -- local line_text = string.format("%s %s %s", letter, current, name)
+
+    -- Determine highlight group based on focus order
+    local hl_group
+    local focus_pos = nil
+    for i, buf in ipairs(state.focus_order) do
+      if buf == bufnr then
+        focus_pos = i
+        break
+      end
+    end
+
+    if focus_pos == 1 then
+      hl_group = "BuffersActive"    -- Most recently active (a)
+    elseif focus_pos == 2 then
+      hl_group = "BuffersPrevious"  -- Previously active (b)
+    else
+      hl_group = "BuffersInactive"  -- All others
+    end
+
+    -- Calculate the start and end positions for the buffer name
+    local name_start = string.len(letter) + 3  -- letter + " " + current + " "
+    local name_end = name_start + string.len(name)
+
+    -- Apply highlight to the buffer name only
+    vim.api.nvim_buf_set_extmark(state.buf, vim.api.nvim_create_namespace("buffers_colors"),
+      line_idx - 1, name_start, {
+        end_col = name_end,
+        hl_group = hl_group
+      })
+  end
+
   -- Store letter mapping for navigation
   state.letter_map = {}
   for bufnr, letter in pairs(letter_map) do
@@ -163,6 +242,9 @@ local function create_window()
   if state.win and vim.api.nvim_win_is_valid(state.win) then
     return
   end
+
+  -- Set up highlight groups
+  setup_highlights()
 
   -- Get or create buffer
   if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
@@ -237,9 +319,20 @@ end
 
 function M.setup(config)
   -- Merge config
-  if config and config.keybindings then
-    state.config.keybindings = vim.tbl_extend("force", state.config.keybindings, config.keybindings)
+  if config then
+    if config.keybindings then
+      state.config.keybindings = vim.tbl_extend("force", state.config.keybindings, config.keybindings)
+    end
+    if config.colors then
+      state.config.colors = vim.tbl_extend("force", state.config.colors, config.colors)
+    end
+    if config.width then
+      state.config.width = config.width
+    end
   end
+
+  -- Set up highlight groups
+  setup_highlights()
 
   -- Set up keybindings
   vim.api.nvim_set_keymap("n", state.config.keybindings.show, "", {

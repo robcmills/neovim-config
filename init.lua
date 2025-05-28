@@ -363,9 +363,39 @@ end, { desc = "Copilot Panel" })
 
 -- save session
 -- :mksession! ~/.config/nvim/sessions/session-name.vim
+vim.api.nvim_create_user_command('SaveSession', function()
+  vim.ui.input({ prompt = 'Session name: ' }, function(input)
+    if input and input ~= '' then
+      local session_path = vim.fn.expand('~/.config/nvim/sessions/' .. input .. '.vim')
+      vim.cmd('mksession! ' .. session_path)
+      print('Session saved: ' .. input)
+    end
+  end)
+end, {})
 
 -- load session
 -- :source ~/.config/nvim/sessions/session-name.vim
+vim.api.nvim_create_user_command('LoadSession', function()
+  local sessions_dir = vim.fn.expand('~/.config/nvim/sessions/')
+  local sessions = vim.fn.glob(sessions_dir .. '*.vim', false, true)
+
+  if #sessions == 0 then
+    print('No sessions found')
+    return
+  end
+
+  local session_names = {}
+  for _, session in ipairs(sessions) do
+    table.insert(session_names, vim.fn.fnamemodify(session, ':t:r'))
+  end
+
+  vim.ui.select(session_names, { prompt = 'Select session: ' }, function(choice)
+    if choice then
+      vim.cmd('source ' .. sessions_dir .. choice .. '.vim')
+      print('Session loaded: ' .. choice)
+    end
+  end)
+end, {})
 
 -- set window size
 -- first set "fixed" height so changes persist
