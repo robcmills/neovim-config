@@ -39,6 +39,8 @@ The code is as simple and minimal as possible.
 The code is written in lua.
 
 TODO:
+  - enable showing diagnostics in the buffer list (red if there are errors)
+  - implement buffer next/prev commands
   - enable modifying buffers list manually (reorder)
   - on show check for existing buffers window and focus it if it exists
   - when deleting a buffer in nvim-tree, if deleted buffer is active, then its window is closed,
@@ -156,6 +158,7 @@ local function render()
 
   local lines = {}
   local buffers = get_ordered_buffers()
+  local alternate_bufnr = vim.fn.bufnr('#')
 
   -- Sort by focus order for letter assignment
   local letter_order = {}
@@ -182,8 +185,15 @@ local function render()
   for _, bufnr in ipairs(buffers) do
     local name = get_buffer_name(bufnr)
     local letter = letter_map[bufnr]
-    local current = bufnr == vim.api.nvim_get_current_buf() and "*" or " "
-    table.insert(lines, string.format("%s %s %s", letter, current, name))
+    local indicator
+    if bufnr == vim.api.nvim_get_current_buf() then
+      indicator = "%"
+    elseif bufnr == alternate_bufnr then
+      indicator = "#"
+    else
+      indicator = " "
+    end
+    table.insert(lines, string.format("%s %s %s", letter, indicator, name))
   end
 
   vim.bo[state.buf].modifiable = true
@@ -197,8 +207,6 @@ local function render()
   for line_idx, bufnr in ipairs(buffers) do
     local name = get_buffer_name(bufnr)
     local letter = letter_map[bufnr]
-    -- local current = bufnr == vim.api.nvim_get_current_buf() and "*" or " "
-    -- local line_text = string.format("%s %s %s", letter, current, name)
 
     -- Determine highlight group based on focus order
     local hl_group
@@ -219,7 +227,7 @@ local function render()
     end
 
     -- Calculate the start and end positions for the buffer name
-    local name_start = string.len(letter) + 3  -- letter + " " + current + " "
+    local name_start = string.len(letter) + 3  -- letter + " " + indicator + " "
     local name_end = name_start + string.len(name)
 
     -- Apply highlight to the buffer name only
