@@ -18,7 +18,7 @@ b fileB.ts
 c ParenDir/index.ts
 ```
 When the buffers window is focused, pressing one of the letters should open the corresponding buffer.
-The shortcut letters should be ascending alphabetically based on the order in which the buffers were focused.
+The shortcut letters ascend alphabetically based on the order in which the buffers were focused.
 
 It renders buffers top to bottom in the order they were opened by default, but it is modifiable by the user to manually reorder them, and any changes made persist.
 
@@ -39,7 +39,6 @@ The code is as simple and minimal as possible.
 The code is written in lua.
 
 TODO:
-  - enable showing diagnostics in the buffer list (red if there are errors)
   - implement buffer next/prev commands
   - enable modifying buffers list manually (reorder)
   - when deleting a buffer in nvim-tree, if deleted buffer is active, then its window is closed,
@@ -47,6 +46,7 @@ TODO:
     Perhaps when selecting a buffer, make a check to see if the "last active" buffer has a window,
     and if not create one.
   - show parent dir if a buffer name is duplicated in the list
+
 ]]
 
 --[[
@@ -59,6 +59,7 @@ require('buffers').setup({
   },
   width = 50,
   colors = {
+    error = { link = "ErrorMsg" }, -- Buffers with LSP errors (overrides other colors)
     active = { link = "Normal" }, -- Most recently active buffer (a)
     previous = { link = "Title" }, -- Previously active buffer (b)
     inactive = { link = "Comment" }, -- All other buffers
@@ -83,6 +84,7 @@ local state = {
     },
     width = 50,
     colors = {
+      error = { link = "ErrorMsg" }, -- Buffers with LSP errors (overrides other colors)
       active = { link = "Normal" }, -- Most recently active buffer (a)
       previous = { link = "Title" }, -- Previously active buffer (b)  
       inactive = { link = "Comment" }, -- All other buffers
@@ -95,6 +97,7 @@ local function setup_highlights()
   vim.api.nvim_set_hl(0, "BuffersActive", state.config.colors.active)
   vim.api.nvim_set_hl(0, "BuffersPrevious", state.config.colors.previous)
   vim.api.nvim_set_hl(0, "BuffersInactive", state.config.colors.inactive)
+  vim.api.nvim_set_hl(0, "BuffersError", state.config.colors.error)
 end
 
 -- Get display name for buffer
@@ -118,6 +121,12 @@ local function get_letter(index)
     local suffix = ((index - 1) % 26) + 1
     return get_letter(prefix) .. string.char(96 + suffix)
   end
+end
+
+-- Check if buffer has LSP diagnostic errors
+local function has_diagnostic_errors(bufnr)
+  local diagnostics = vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.ERROR })
+  return #diagnostics > 0
 end
 
 -- Update focus order when buffer is entered
@@ -209,20 +218,26 @@ local function render()
 
     -- Determine highlight group based on focus order
     local hl_group
-    local focus_pos = nil
-    for i, buf in ipairs(state.focus_order) do
-      if buf == bufnr then
-        focus_pos = i
-        break
-      end
-    end
 
-    if focus_pos == 1 then
-      hl_group = "BuffersActive"    -- Most recently active (a)
-    elseif focus_pos == 2 then
-      hl_group = "BuffersPrevious"  -- Previously active (b)
+    -- Check for diagnostic errors first (overrides all other colors)
+    if has_diagnostic_errors(bufnr) then
+      hl_group = "BuffersError"
     else
-      hl_group = "BuffersInactive"  -- All others
+      local focus_pos = nil
+      for i, buf in ipairs(state.focus_order) do
+        if buf == bufnr then
+          focus_pos = i
+          break
+        end
+      end
+
+      if focus_pos == 1 then
+        hl_group = "BuffersActive"    -- Most recently active (a)
+      elseif focus_pos == 2 then
+        hl_group = "BuffersPrevious"  -- Previously active (b)
+      else
+        hl_group = "BuffersInactive"  -- All others
+      end
     end
 
     -- Calculate the start and end positions for the buffer name
@@ -388,6 +403,16 @@ function M.setup(config)
     callback = function()
       if state.win and vim.api.nvim_win_is_valid(state.win) then
         vim.defer_fn(render, 10)
+      end
+    end
+  })
+
+  -- Update on diagnostic changes
+  vim.api.nvim_create_autocmd("DiagnosticChanged", {
+    group = group,
+    callback = function()
+      if state.win and vim.api.nvim_win_is_valid(state.win) then
+        render()
       end
     end
   })
