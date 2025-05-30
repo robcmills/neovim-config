@@ -42,7 +42,6 @@ TODO:
   - enable showing diagnostics in the buffer list (red if there are errors)
   - implement buffer next/prev commands
   - enable modifying buffers list manually (reorder)
-  - on show check for existing buffers window and focus it if it exists
   - when deleting a buffer in nvim-tree, if deleted buffer is active, then its window is closed,
     causing the buffers window to become "full screen" and get into a bad state.
     Perhaps when selecting a buffer, make a check to see if the "last active" buffer has a window,
@@ -314,7 +313,11 @@ end
 
 -- Public functions
 function M.show()
-  create_window()
+  if state.win and vim.api.nvim_win_is_valid(state.win) then
+    vim.api.nvim_set_current_win(state.win)
+  else
+    create_window()
+  end
   render()
 end
 
