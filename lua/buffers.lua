@@ -39,6 +39,7 @@ The code is as simple and minimal as possible.
 The code is written in lua.
 
 TODO:
+  - add warning hl group for buffers with unsaved changes
   - implement buffer next/prev commands
   - enable modifying buffers list manually (reorder)
   - when deleting a buffer in nvim-tree, if deleted buffer is active, then its window is closed,
@@ -158,6 +159,25 @@ local function get_ordered_buffers()
   return buffers
 end
 
+-- Move cursor to active buffer line in buffers window
+local function move_cursor_to_active_buffer()
+  if not state.win or not vim.api.nvim_win_is_valid(state.win) then
+    return
+  end
+
+  local current_bufnr = vim.api.nvim_get_current_buf()
+  local buffers = get_ordered_buffers()
+
+  -- Find the line number for the current buffer
+  for line_idx, bufnr in ipairs(buffers) do
+    if bufnr == current_bufnr then
+      -- Set cursor to the line with the active buffer, column 0 (shortcut letter)
+      vim.api.nvim_win_set_cursor(state.win, {line_idx, 0})
+      break
+    end
+  end
+end
+
 -- Render buffer list
 local function render()
   if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
@@ -257,6 +277,8 @@ local function render()
   for bufnr, letter in pairs(letter_map) do
     state.letter_map[letter] = bufnr
   end
+
+  move_cursor_to_active_buffer()
 end
 
 -- Create buffer window
