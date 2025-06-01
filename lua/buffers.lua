@@ -39,7 +39,6 @@ The code is as simple and minimal as possible.
 The code is written in lua.
 
 TODO:
-  - add warning hl group for buffers with unsaved changes
   - implement buffer next/prev commands
   - enable modifying buffers list manually (reorder)
   - when deleting a buffer in nvim-tree, if deleted buffer is active, then its window is closed,
@@ -61,6 +60,7 @@ require('buffers').setup({
   width = 50,
   colors = {
     error = { link = "ErrorMsg" }, -- Buffers with LSP errors (overrides other colors)
+    modified = { link = "WarningMsg" }, -- Buffers with unsaved changes
     active = { link = "Normal" }, -- Most recently active buffer (a)
     previous = { link = "Title" }, -- Previously active buffer (b)
     inactive = { link = "Comment" }, -- All other buffers
@@ -86,6 +86,7 @@ local state = {
     width = 50,
     colors = {
       error = { link = "ErrorMsg" }, -- Buffers with LSP errors (overrides other colors)
+      modified = { link = "WarningMsg" }, -- Buffers with unsaved changes
       active = { link = "Normal" }, -- Most recently active buffer (a)
       previous = { link = "Title" }, -- Previously active buffer (b)  
       inactive = { link = "Comment" }, -- All other buffers
@@ -99,6 +100,7 @@ local function setup_highlights()
   vim.api.nvim_set_hl(0, "BuffersPrevious", state.config.colors.previous)
   vim.api.nvim_set_hl(0, "BuffersInactive", state.config.colors.inactive)
   vim.api.nvim_set_hl(0, "BuffersError", state.config.colors.error)
+  vim.api.nvim_set_hl(0, "BuffersModified", state.config.colors.modified)
 end
 
 -- Get display name for buffer
@@ -128,6 +130,11 @@ end
 local function has_diagnostic_errors(bufnr)
   local diagnostics = vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.ERROR })
   return #diagnostics > 0
+end
+
+-- Check if buffer has unsaved changes
+local function has_unsaved_changes(bufnr)
+  return vim.bo[bufnr].modified
 end
 
 -- Update focus order when buffer is entered
@@ -242,6 +249,9 @@ local function render()
     -- Check for diagnostic errors first (overrides all other colors)
     if has_diagnostic_errors(bufnr) then
       hl_group = "BuffersError"
+    -- Check for unsaved changes second (overrides focus-based colors)
+    elseif has_unsaved_changes(bufnr) then
+      hl_group = "BuffersModified"
     else
       local focus_pos = nil
       for i, buf in ipairs(state.focus_order) do
@@ -431,6 +441,16 @@ function M.setup(config)
 
   -- Update on diagnostic changes
   vim.api.nvim_create_autocmd("DiagnosticChanged", {
+    group = group,
+    callback = function()
+      if state.win and vim.api.nvim_win_is_valid(state.win) then
+        render()
+      end
+    end
+  })
+
+  -- Update when buffer modified state changes
+  vim.api.nvim_create_autocmd("BufModifiedSet", {
     group = group,
     callback = function()
       if state.win and vim.api.nvim_win_is_valid(state.win) then
