@@ -40,7 +40,7 @@ The code is written in lua.
 
 TODO:
   - implement buffer next/prev commands
-  - enable modifying buffers list manually (reorder)
+  - implement buffer reorder commands
   - when deleting a buffer in nvim-tree, if deleted buffer is active, then its window is closed,
     causing the buffers window to become "full screen" and get into a bad state.
     Perhaps when selecting a buffer, make a check to see if the "last active" buffer has a window,
@@ -77,7 +77,6 @@ local M = {}
 ---@field buf number|nil Buffer handle for the buffers buffer
 ---@field buffer_order number[] Array of buffer numbers in the order they were opened/tracked
 ---@field focus_order number[] Array of buffer numbers in focus order (most recent first)
----@field custom_order number[] Array of buffer numbers in user-defined custom order (empty by default)
 ---@field letter_map table<string, number>|nil Mapping from shortcut letters to buffer numbers
 ---@field config BuffersConfig Configuration options
 
@@ -103,7 +102,6 @@ local state = {
   buf = nil,
   buffer_order = {}, -- Array of buffer numbers in order they were opened
   focus_order = {}, -- Array of buffer numbers in focus order (most recent first)
-  custom_order = {}, -- Array of buffer numbers in user-defined order (overrides buffer_order when present)
   config = {
     keybindings = {
       show = "<leader>b",
@@ -179,10 +177,7 @@ end
 local function get_ordered_buffers()
   local buffers = {}
 
-  -- Use custom order if available, otherwise use buffer_order
-  local order = #state.custom_order > 0 and state.custom_order or state.buffer_order
-
-  for _, bufnr in ipairs(order) do
+  for _, bufnr in ipairs(state.buffer_order) do
     if vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buflisted then
       table.insert(buffers, bufnr)
     end
