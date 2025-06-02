@@ -448,8 +448,22 @@ function M.setup(config)
   -- Update on buffer changes
   vim.api.nvim_create_autocmd({"BufDelete", "BufWipeout"}, {
     group = group,
-    callback = function()
+    callback = function(e)
       if state.win and vim.api.nvim_win_is_valid(state.win) then
+        -- remove deleted buffer from buffer_order
+        for i, buf in ipairs(state.buffer_order) do
+          if buf == e.buf then
+            table.remove(state.buffer_order, i)
+            break
+          end
+        end
+        -- remove deleted buffer from focus_order
+        for i, buf in ipairs(state.focus_order) do
+          if buf == e.buf then
+            table.remove(state.focus_order, i)
+            break
+          end
+        end
         vim.defer_fn(render, 10)
       end
     end
@@ -460,7 +474,7 @@ function M.setup(config)
     group = group,
     callback = function()
       if state.win and vim.api.nvim_win_is_valid(state.win) then
-        render()
+        vim.defer_fn(render, 10)
       end
     end
   })
