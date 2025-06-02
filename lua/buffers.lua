@@ -72,12 +72,38 @@ Colors values are highlight definition maps (see nvim_set_hl):
 
 local M = {}
 
+---@class BuffersState
+---@field win number|nil Window handle for the buffers window
+---@field buf number|nil Buffer handle for the buffers buffer
+---@field buffer_order number[] Array of buffer numbers in the order they were opened/tracked
+---@field focus_order number[] Array of buffer numbers in focus order (most recent first)
+---@field custom_order number[] Array of buffer numbers in user-defined custom order (empty by default)
+---@field letter_map table<string, number>|nil Mapping from shortcut letters to buffer numbers
+---@field config BuffersConfig Configuration options
+
+---@class BuffersConfig
+---@field keybindings BuffersKeybindings Keybinding configuration
+---@field width number Width of the buffers window
+---@field colors BuffersColors Color configuration
+
+---@class BuffersKeybindings
+---@field show string Keybinding to show the buffers window
+---@field hide string Keybinding to hide the buffers window
+
+---@class BuffersColors (see nvim_set_hl)
+---@field error table Highlight definition for buffers with LSP errors
+---@field modified table Highlight definition for buffers with unsaved changes
+---@field active table Highlight definition for the most recently active buffer
+---@field previous table Highlight definition for the previously active buffer
+---@field inactive table Highlight definition for all other buffers
+
+---@class BuffersState
 local state = {
   win = nil,
   buf = nil,
-  buffer_order = {},
-  focus_order = {},
-  custom_order = {},
+  buffer_order = {}, -- Array of buffer numbers in order they were opened
+  focus_order = {}, -- Array of buffer numbers in focus order (most recent first)
+  custom_order = {}, -- Array of buffer numbers in user-defined order (overrides buffer_order when present)
   config = {
     keybindings = {
       show = "<leader>b",
@@ -370,21 +396,21 @@ function M.hide()
   end
 end
 
+---@param config BuffersConfig|nil
 function M.setup(config)
   -- Merge config
   if config then
-    if config.keybindings then
-      state.config.keybindings = vim.tbl_extend("force", state.config.keybindings, config.keybindings)
-    end
     if config.colors then
       state.config.colors = vim.tbl_extend("force", state.config.colors, config.colors)
+    end
+    if config.keybindings then
+      state.config.keybindings = vim.tbl_extend("force", state.config.keybindings, config.keybindings)
     end
     if config.width then
       state.config.width = config.width
     end
   end
 
-  -- Set up highlight groups
   setup_highlights()
 
   -- Set up keybindings
