@@ -150,7 +150,6 @@ local function update_focus_order(bufnr)
   table.insert(state.focus_order, 1, bufnr)
 end
 
--- Get ordered buffer list
 local function get_ordered_buffers()
   local buffers = {}
 
@@ -185,15 +184,12 @@ local function move_cursor_to_active_buffer()
   end
 end
 
--- Render buffer list
 local function render()
   if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
     return
   end
 
-  local lines = {}
   local buffers = get_ordered_buffers()
-  local alternate_bufnr = vim.fn.bufnr('#')
 
   -- Sort by focus order for letter assignment
   local letter_order = {}
@@ -217,11 +213,15 @@ local function render()
   end
 
   -- Render lines
+  local lines = {}
+  local alternate_bufnr = vim.fn.bufnr('#')
+  local current_bufnr = vim.api.nvim_get_current_buf()
+
   for _, bufnr in ipairs(buffers) do
     local name = get_buffer_name(bufnr)
     local letter = letter_map[bufnr]
     local indicator
-    if bufnr == vim.api.nvim_get_current_buf() then
+    if bufnr == current_bufnr then
       indicator = "%"
     elseif bufnr == alternate_bufnr then
       indicator = "#"
@@ -233,23 +233,16 @@ local function render()
 
   vim.bo[state.buf].modifiable = true
   vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
-  vim.bo[state.buf].modifiable = false
+  -- vim.bo[state.buf].modifiable = false
 
   -- Clear existing extmarks
   vim.api.nvim_buf_clear_namespace(state.buf, -1, 0, -1)
 
-  -- Apply colors based on focus order
+  -- Highlight group
   for line_idx, bufnr in ipairs(buffers) do
-    local name = get_buffer_name(bufnr)
-    local letter = letter_map[bufnr]
-
-    -- Determine highlight group based on focus order
     local hl_group
-
-    -- Check for diagnostic errors first (overrides all other colors)
     if has_diagnostic_errors(bufnr) then
       hl_group = "BuffersError"
-    -- Check for unsaved changes second (overrides focus-based colors)
     elseif has_unsaved_changes(bufnr) then
       hl_group = "BuffersModified"
     else
@@ -271,7 +264,9 @@ local function render()
     end
 
     -- Calculate the start and end positions for the buffer name
-    local name_start = string.len(letter) + 3  -- letter + " " + indicator + " "
+    local name = get_buffer_name(bufnr)
+    local letter = letter_map[bufnr]
+    local name_start = string.len(letter) + 3
     local name_end = name_start + string.len(name)
 
     -- Apply highlight to the buffer name only
