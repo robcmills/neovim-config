@@ -128,14 +128,32 @@ local function setup_highlights()
 end
 
 -- Get display name for buffer
-local function get_buffer_name(bufnr)
+local function get_buffer_name(bufnr, all_buffers)
   local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":t")
   if name == "" then
     return "[No Name]"
-  elseif name:match("^index%.") then
+  end
+
+  -- Check for duplicate names among all buffers
+  local has_duplicate = false
+  if all_buffers then
+    for _, other_bufnr in ipairs(all_buffers) do
+      if other_bufnr ~= bufnr then
+        local other_name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(other_bufnr), ":t")
+        if other_name == name then
+          has_duplicate = true
+          break
+        end
+      end
+    end
+  end
+
+  -- Include parent directory for index files or duplicates
+  if name:match("^index%.") or has_duplicate then
     local parent = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":h:t")
     return parent .. "/" .. name
   end
+
   return name
 end
 
@@ -239,7 +257,7 @@ local function render()
   local current_bufnr = vim.api.nvim_get_current_buf()
 
   for _, bufnr in ipairs(buffers) do
-    local name = get_buffer_name(bufnr)
+    local name = get_buffer_name(bufnr, buffers)
     local letter = letter_map[bufnr]
     local indicator
     if bufnr == current_bufnr then
@@ -285,7 +303,7 @@ local function render()
     end
 
     -- Calculate the start and end positions for the buffer name
-    local name = get_buffer_name(bufnr)
+    local name = get_buffer_name(bufnr, buffers)
     local letter = letter_map[bufnr]
     local name_start = string.len(letter) + 3
     local name_end = name_start + string.len(name)
