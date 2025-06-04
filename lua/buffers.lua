@@ -467,6 +467,58 @@ function M.previous()
   end
 end
 
+function M.movePrev()
+  local buffers = get_ordered_buffers()
+  if #buffers <= 1 then
+    return
+  end
+
+  local current_bufnr = vim.api.nvim_get_current_buf()
+  local current_index = nil
+
+  -- Find current buffer index in buffer_order
+  for i, bufnr in ipairs(state.buffer_order) do
+    if bufnr == current_bufnr then
+      current_index = i
+      break
+    end
+  end
+
+  if current_index and current_index > 1 then
+    -- Move current buffer one position up (towards beginning)
+    local buffer_to_move = state.buffer_order[current_index]
+    table.remove(state.buffer_order, current_index)
+    table.insert(state.buffer_order, current_index - 1, buffer_to_move)
+    render()
+  end
+end
+
+function M.moveNext()
+  local buffers = get_ordered_buffers()
+  if #buffers <= 1 then
+    return
+  end
+
+  local current_bufnr = vim.api.nvim_get_current_buf()
+  local current_index = nil
+
+  -- Find current buffer index in buffer_order
+  for i, bufnr in ipairs(state.buffer_order) do
+    if bufnr == current_bufnr then
+      current_index = i
+      break
+    end
+  end
+
+  if current_index and current_index < #state.buffer_order then
+    -- Move current buffer one position down (towards end)
+    local buffer_to_move = state.buffer_order[current_index]
+    table.remove(state.buffer_order, current_index)
+    table.insert(state.buffer_order, current_index + 1, buffer_to_move)
+    render()
+  end
+end
+
 ---@param config BuffersConfig|nil
 function M.setup(config)
   -- Merge config
@@ -524,6 +576,14 @@ function M.setup(config)
 
   vim.api.nvim_create_user_command("BuffersPrev", M.previous, {
     desc = "Navigate to previous buffer"
+  })
+
+  vim.api.nvim_create_user_command("BuffersMovePrev", M.movePrev, {
+    desc = "Move current buffer up in the buffer order"
+  })
+
+  vim.api.nvim_create_user_command("BuffersMoveNext", M.moveNext, {
+    desc = "Move current buffer down in the buffer order"
   })
 
   -- Set up autocmds
