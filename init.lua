@@ -127,8 +127,8 @@ vim.keymap.set("n", "<leader>W", "<C-w>W", { desc = "Move to prev window", norem
 vim.keymap.set("n", "<leader>e", ":Lex<cr>", { desc = "Toggle File explorer" })
 
 -- buffer nav
-vim.keymap.set("n", "t", ":BufferLineCycleNext<cr>", { desc = "Next buffer" })
-vim.keymap.set("n", "T", ":BufferLineCyclePrev<cr>", { desc = "Prev buffer" })
+vim.keymap.set("n", "t", ":BuffersNext<cr>", { desc = "Next buffer" })
+vim.keymap.set("n", "T", ":BuffersPrev<cr>", { desc = "Prev buffer" })
 vim.keymap.set("n", "<leader><", ":BufferLineMovePrev<cr>", { desc = "Move buffer left" })
 vim.keymap.set("n", "<leader>>", ":BufferLineMoveNext<cr>", { desc = "Move buffer right" })
 vim.keymap.set("n", "<leader>C", ":%bd | NvimTreeFocus | NvimTreeCollapse | NvimTreeRefresh<cr>gg", { desc = "Close all buffers" })

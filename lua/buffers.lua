@@ -56,6 +56,8 @@ require('buffers').setup({
   keybindings = {
     show = "<leader>b",
     hide = "<leader>B",
+    next = "N",
+    previous = "E",
   },
   width = 50,
   colors = {
@@ -88,6 +90,8 @@ local M = {}
 ---@class BuffersKeybindings
 ---@field show string Keybinding to show the buffers window
 ---@field hide string Keybinding to hide the buffers window
+---@field next string|nil Keybinding to navigate to next buffer
+---@field previous string|nil Keybinding to navigate to previous buffer
 
 ---@class BuffersColors (see nvim_set_hl)
 ---@field error table Highlight definition for buffers with LSP errors
@@ -106,6 +110,8 @@ local state = {
     keybindings = {
       show = "<leader>b",
       hide = "<leader>B",
+      next = nil,
+      previous = nil,
     },
     width = 50,
     colors = {
@@ -409,6 +415,58 @@ function M.hide()
   end
 end
 
+function M.next()
+  local buffers = get_ordered_buffers()
+  if #buffers <= 1 then
+    return
+  end
+
+  local current_bufnr = vim.api.nvim_get_current_buf()
+  local current_index = nil
+
+  -- Find current buffer index in buffer_order
+  for i, bufnr in ipairs(buffers) do
+    if bufnr == current_bufnr then
+      current_index = i
+      break
+    end
+  end
+
+  if current_index then
+    -- Move to next buffer (wrap around to beginning)
+    local next_index = (current_index % #buffers) + 1
+    local next_bufnr = buffers[next_index]
+    vim.api.nvim_set_current_buf(next_bufnr)
+    render()
+  end
+end
+
+function M.previous()
+  local buffers = get_ordered_buffers()
+  if #buffers <= 1 then
+    return
+  end
+
+  local current_bufnr = vim.api.nvim_get_current_buf()
+  local current_index = nil
+
+  -- Find current buffer index in buffer_order
+  for i, bufnr in ipairs(buffers) do
+    if bufnr == current_bufnr then
+      current_index = i
+      break
+    end
+  end
+
+  if current_index then
+    -- Move to previous buffer (wrap around to end)
+    local prev_index = current_index == 1 and #buffers or current_index - 1
+    local prev_bufnr = buffers[prev_index]
+    vim.api.nvim_set_current_buf(prev_bufnr)
+    render()
+  end
+end
+
 ---@param config BuffersConfig|nil
 function M.setup(config)
   -- Merge config
@@ -439,6 +497,33 @@ function M.setup(config)
     noremap = true,
     silent = true,
     desc = "Hide buffer list"
+  })
+
+  if state.config.keybindings.next then
+    vim.api.nvim_set_keymap("n", state.config.keybindings.next, "", {
+      callback = M.next,
+      noremap = true,
+      silent = true,
+      desc = "Navigate to next buffer"
+    })
+  end
+
+  if state.config.keybindings.previous then
+    vim.api.nvim_set_keymap("n", state.config.keybindings.previous, "", {
+      callback = M.previous,
+      noremap = true,
+      silent = true,
+      desc = "Navigate to previous buffer"
+    })
+  end
+
+  -- Set up user commands
+  vim.api.nvim_create_user_command("BuffersNext", M.next, {
+    desc = "Navigate to next buffer"
+  })
+
+  vim.api.nvim_create_user_command("BuffersPrev", M.previous, {
+    desc = "Navigate to previous buffer"
   })
 
   -- Set up autocmds
