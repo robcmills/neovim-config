@@ -61,6 +61,7 @@ require('buffers').setup({
   },
   width = 50, -- or 'auto' to automatically fit to longest buffer name
   min_width = 25, -- minimum width when using auto width (default: 25)
+  side = "left", -- "left" or "right" (default: "left")
   colors = {
     error = { link = "ErrorMsg" }, -- Buffers with LSP errors (overrides other colors)
     modified = { link = "WarningMsg" }, -- Buffers with unsaved changes
@@ -87,6 +88,7 @@ local M = {}
 ---@field keybindings BuffersKeybindings Keybinding configuration
 ---@field width number|string Width of the buffers window (number or 'auto')
 ---@field min_width number|nil Minimum width when using auto width (default: 20)
+---@field side string Side of the screen to show buffers window ("left" or "right", default: "left")
 ---@field colors BuffersColors Color configuration
 
 ---@class BuffersKeybindings
@@ -117,6 +119,7 @@ local state = {
     },
     width = 'auto',
     min_width = 25, -- minimum width when using auto width (default: 25)
+    side = 'left', -- default to left side
     colors = {
       error = { link = "ErrorMsg" }, -- Buffers with LSP errors (overrides other colors)
       modified = { link = "WarningMsg" }, -- Buffers with unsaved changes
@@ -410,7 +413,11 @@ local function create_window()
 
   -- Create window
   vim.cmd("vsplit")
-  vim.cmd("wincmd L")
+  if state.config.side == "right" then
+    vim.cmd("wincmd L")
+  else
+    vim.cmd("wincmd H")
+  end
   state.win = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(state.win, state.buf)
   vim.api.nvim_win_set_width(state.win, get_effective_width())
@@ -593,6 +600,9 @@ function M.setup(config)
     end
     if config.min_width then
       state.config.min_width = config.min_width
+    end
+    if config.side then
+      state.config.side = config.side
     end
   end
 
