@@ -59,7 +59,7 @@ require('buffers').setup({
     next = "N",
     previous = "E",
   },
-  width = 50,
+  width = 50, -- or 'auto' to automatically fit to longest buffer name
   colors = {
     error = { link = "ErrorMsg" }, -- Buffers with LSP errors (overrides other colors)
     modified = { link = "WarningMsg" }, -- Buffers with unsaved changes
@@ -84,7 +84,7 @@ local M = {}
 
 ---@class BuffersConfig
 ---@field keybindings BuffersKeybindings Keybinding configuration
----@field width number Width of the buffers window
+---@field width number|string Width of the buffers window (number or 'auto')
 ---@field colors BuffersColors Color configuration
 
 ---@class BuffersKeybindings
@@ -113,7 +113,7 @@ local state = {
       next = nil,
       previous = nil,
     },
-    width = 50,
+    width = 'auto',
     colors = {
       error = { link = "ErrorMsg" }, -- Buffers with LSP errors (overrides other colors)
       modified = { link = "WarningMsg" }, -- Buffers with unsaved changes
@@ -208,6 +208,57 @@ local function get_ordered_buffers()
   end
 
   return buffers
+end
+
+-- Calculate auto width based on buffer names
+local function calculate_auto_width()
+  local buffers = get_ordered_buffers()
+  local max_width = 20 -- minimum width
+
+  if #buffers == 0 then
+    return max_width
+  end
+
+  -- Sort by focus order for letter assignment (same logic as render function)
+  local letter_order = {}
+  for _, bufnr in ipairs(buffers) do
+    table.insert(letter_order, bufnr)
+  end
+  table.sort(letter_order, function(a, b)
+    local a_pos = #state.focus_order + 1
+    local b_pos = #state.focus_order + 1
+    for i, buf in ipairs(state.focus_order) do
+      if buf == a then a_pos = i end
+      if buf == b then b_pos = i end
+    end
+    return a_pos < b_pos
+  end)
+
+  -- Create letter mapping (same as render function)
+  local letter_map = {}
+  for i, bufnr in ipairs(letter_order) do
+    letter_map[bufnr] = get_letter(i)
+  end
+
+  -- Calculate width for each buffer line
+  for _, bufnr in ipairs(buffers) do
+    local name = get_buffer_name(bufnr, buffers)
+    local letter = letter_map[bufnr]
+    -- Format: "letter indicator name" + 1 margin column
+    local line_width = string.len(letter) + 3 + string.len(name) + 1
+    max_width = math.max(max_width, line_width)
+  end
+
+  return max_width
+end
+
+-- Get effective width (auto or configured)
+local function get_effective_width()
+  if state.config.width == 'auto' then
+    return calculate_auto_width()
+  else
+    return state.config.width
+  end
 end
 
 -- Move cursor to active buffer line in buffers window
@@ -328,6 +379,11 @@ local function render()
     state.letter_map[letter] = bufnr
   end
 
+  -- Update window width if auto width is enabled
+  if state.config.width == 'auto' and state.win and vim.api.nvim_win_is_valid(state.win) then
+    vim.api.nvim_win_set_width(state.win, get_effective_width())
+  end
+
   move_cursor_to_active_buffer()
 end
 
@@ -354,7 +410,7 @@ local function create_window()
   vim.cmd("wincmd L")
   state.win = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(state.win, state.buf)
-  vim.api.nvim_win_set_width(state.win, state.config.width)
+  vim.api.nvim_win_set_width(state.win, get_effective_width())
   vim.wo[state.win].winfixwidth = true
   vim.wo[state.win].number = false
   vim.wo[state.win].relativenumber = false
