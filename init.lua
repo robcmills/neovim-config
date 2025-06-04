@@ -124,7 +124,6 @@ vim.cmd [[
 -- window nav
 vim.keymap.set("n", "<leader>w", "<C-w>w", { desc = "Move to next window", noremap = true })
 vim.keymap.set("n", "<leader>W", "<C-w>W", { desc = "Move to prev window", noremap = true })
-vim.keymap.set("n", "<leader>e", ":Lex<cr>", { desc = "Toggle File explorer" })
 
 -- buffer nav
 vim.keymap.set("n", "t", ":BuffersNext<cr>", { desc = "Next buffer" })
@@ -172,21 +171,26 @@ end, { desc = "Symbols" })
 
 -- nvim-tree
 vim.keymap.set("n", "<leader>e", function()
+  vim.cmd('BuffersHide')
   local bufnr = vim.api.nvim_get_current_buf()
-  local filetype = vim.api.nvim_buf_get_option(bufnr, 'filetype')
+  -- local filetype = vim.api.nvim_buf_get_option(bufnr, 'filetype')
+  local filetype = vim.bo[bufnr].filetype
   if filetype == 'NvimTree' then
     vim.cmd('wincmd l')
   else
     vim.cmd('NvimTreeFocus')
   end
 end, { desc = "Toggle file tree focus" })
+
 vim.keymap.set("n", "<leader>E", ":NvimTreeToggle<cr>", { desc = "Toggle file tree open" })
+
 
 -- toggle comment
 vim.keymap.set("n", "<leader>/", function()
   require("Comment.api").toggle.linewise.current()
 end, { desc = "Comment line" })
 vim.keymap.set('x', '<leader>/', '<esc><cmd>lua require("Comment.api").toggle.linewise(vim.fn.visualmode())<cr>')
+
 
 -- spell check
 vim.keymap.set('n', '<leader>s', function()
@@ -300,6 +304,7 @@ vim.keymap.set('n', '<leader>gd', function()
 end, { desc = 'Git diff' })
 
 vim.keymap.set('n', '<leader>gc', function()
+  vim.cmd('BuffersHide')
   vim.cmd('vsplit')
   vim.cmd('Git add --all')
   vim.cmd('Git commit')

@@ -642,6 +642,14 @@ function M.setup(config)
   end
 
   -- Set up user commands
+  vim.api.nvim_create_user_command("BuffersShow", M.show, {
+    desc = "Show buffer list"
+  })
+
+  vim.api.nvim_create_user_command("BuffersHide", M.hide, {
+    desc = "Hide buffer list"
+  })
+
   vim.api.nvim_create_user_command("BuffersNext", M.next, {
     desc = "Navigate to next buffer"
   })
