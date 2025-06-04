@@ -60,6 +60,7 @@ require('buffers').setup({
     previous = "E",
   },
   width = 50, -- or 'auto' to automatically fit to longest buffer name
+  min_width = 25, -- minimum width when using auto width (default: 25)
   colors = {
     error = { link = "ErrorMsg" }, -- Buffers with LSP errors (overrides other colors)
     modified = { link = "WarningMsg" }, -- Buffers with unsaved changes
@@ -85,6 +86,7 @@ local M = {}
 ---@class BuffersConfig
 ---@field keybindings BuffersKeybindings Keybinding configuration
 ---@field width number|string Width of the buffers window (number or 'auto')
+---@field min_width number|nil Minimum width when using auto width (default: 20)
 ---@field colors BuffersColors Color configuration
 
 ---@class BuffersKeybindings
@@ -114,6 +116,7 @@ local state = {
       previous = nil,
     },
     width = 'auto',
+    min_width = 25, -- minimum width when using auto width (default: 25)
     colors = {
       error = { link = "ErrorMsg" }, -- Buffers with LSP errors (overrides other colors)
       modified = { link = "WarningMsg" }, -- Buffers with unsaved changes
@@ -213,7 +216,7 @@ end
 -- Calculate auto width based on buffer names
 local function calculate_auto_width()
   local buffers = get_ordered_buffers()
-  local max_width = 20 -- minimum width
+  local max_width = state.config.min_width or 25 -- minimum width
 
   if #buffers == 0 then
     return max_width
@@ -587,6 +590,9 @@ function M.setup(config)
     end
     if config.width then
       state.config.width = config.width
+    end
+    if config.min_width then
+      state.config.min_width = config.min_width
     end
   end
 
