@@ -126,6 +126,13 @@ vim.keymap.set("n", "<leader>w", "<C-w>w", { desc = "Move to next window", norem
 vim.keymap.set("n", "<leader>W", "<C-w>W", { desc = "Move to prev window", noremap = true })
 
 -- buffer nav
+vim.keymap.set("n", "<leader>b", function()
+  vim.cmd('NvimTreeClose')
+  vim.cmd('BuffersShow')
+end, { desc = "Show buffers" })
+vim.keymap.set("n", "<leader>B", function()
+  vim.cmd('BuffersHide')
+end, { desc = "Show buffers" })
 vim.keymap.set("n", "t", ":BuffersNext<cr>", { desc = "Next buffer" })
 vim.keymap.set("n", "T", ":BuffersPrev<cr>", { desc = "Prev buffer" })
 vim.keymap.set("n", "<C-e>", ":BuffersMovePrev<cr>", { desc = "Move buffer up" })

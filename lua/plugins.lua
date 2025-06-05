@@ -39,16 +39,6 @@ return require('packer').startup {
     }
 
     use {
-      'akinsho/bufferline.nvim',
-      after = 'nvim-web-devicons',
-      tag = '*',
-      requires = 'nvim-tree/nvim-web-devicons',
-      config = function()
-        require 'configs.bufferline'
-      end,
-    }
-
-    use {
       'nvim-lua/plenary.nvim',
       module = 'plenary',
     }

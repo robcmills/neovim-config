@@ -27,8 +27,6 @@ Buffer names are colored based on their focus order:
 - Previously active buffer (b): soft cyan (configurable)
 - All other buffers: gray (configurable)
 
-It is configurable with custom keybindings and colors.
-
 Buffers window is a configurable fixed width (default 50).
 
 It exposes methods to:
@@ -39,8 +37,8 @@ The code is as simple and minimal as possible.
 The code is written in lua.
 
 TODO:
-  - implement buffer next/prev commands
-  - implement buffer reorder commands
+  - fix issue when deleting all buffers except for terminal
+  - add icons
   - when deleting a buffer in nvim-tree, if deleted buffer is active, then its window is closed,
     causing the buffers window to become "full screen" and get into a bad state.
     Perhaps when selecting a buffer, make a check to see if the "last active" buffer has a window,
@@ -53,12 +51,6 @@ TODO:
 Example configuration:
 
 require('buffers').setup({
-  keybindings = {
-    show = "<leader>b",
-    hide = "<leader>B",
-    next = "N",
-    previous = "E",
-  },
   width = 50, -- or 'auto' to automatically fit to longest buffer name
   min_width = 25, -- minimum width when using auto width (default: 25)
   side = "left", -- "left" or "right" (default: "left")
@@ -85,17 +77,10 @@ local M = {}
 ---@field config BuffersConfig Configuration options
 
 ---@class BuffersConfig
----@field keybindings BuffersKeybindings Keybinding configuration
 ---@field width number|string Width of the buffers window (number or 'auto')
 ---@field min_width number|nil Minimum width when using auto width (default: 20)
 ---@field side string Side of the screen to show buffers window ("left" or "right", default: "left")
 ---@field colors BuffersColors Color configuration
-
----@class BuffersKeybindings
----@field show string Keybinding to show the buffers window
----@field hide string Keybinding to hide the buffers window
----@field next string|nil Keybinding to navigate to next buffer
----@field previous string|nil Keybinding to navigate to previous buffer
 
 ---@class BuffersColors (see nvim_set_hl)
 ---@field error table Highlight definition for buffers with LSP errors
@@ -111,12 +96,6 @@ local state = {
   buffer_order = {}, -- Array of buffer numbers in order they were opened
   focus_order = {}, -- Array of buffer numbers in focus order (most recent first)
   config = {
-    keybindings = {
-      show = "<leader>b",
-      hide = "<leader>B",
-      next = nil,
-      previous = nil,
-    },
     width = 'auto',
     min_width = 25, -- minimum width when using auto width (default: 25)
     side = 'left', -- default to left side
@@ -592,9 +571,6 @@ function M.setup(config)
     if config.colors then
       state.config.colors = vim.tbl_extend("force", state.config.colors, config.colors)
     end
-    if config.keybindings then
-      state.config.keybindings = vim.tbl_extend("force", state.config.keybindings, config.keybindings)
-    end
     if config.width then
       state.config.width = config.width
     end
@@ -607,39 +583,6 @@ function M.setup(config)
   end
 
   setup_highlights()
-
-  -- Set up keybindings
-  vim.api.nvim_set_keymap("n", state.config.keybindings.show, "", {
-    callback = M.show,
-    noremap = true,
-    silent = true,
-    desc = "Show buffer list"
-  })
-
-  vim.api.nvim_set_keymap("n", state.config.keybindings.hide, "", {
-    callback = M.hide,
-    noremap = true,
-    silent = true,
-    desc = "Hide buffer list"
-  })
-
-  if state.config.keybindings.next then
-    vim.api.nvim_set_keymap("n", state.config.keybindings.next, "", {
-      callback = M.next,
-      noremap = true,
-      silent = true,
-      desc = "Navigate to next buffer"
-    })
-  end
-
-  if state.config.keybindings.previous then
-    vim.api.nvim_set_keymap("n", state.config.keybindings.previous, "", {
-      callback = M.previous,
-      noremap = true,
-      silent = true,
-      desc = "Navigate to previous buffer"
-    })
-  end
 
   -- Set up user commands
   vim.api.nvim_create_user_command("BuffersShow", M.show, {
