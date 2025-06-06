@@ -65,12 +65,13 @@ vim.opt.directory = vim.fn.expand('$HOME/.local/state/nvim/swap//')
 vim.g.mapleader = " "
 vim.keymap.set("", "<Space>", "<Nop>") -- disable space because leader
 
+
 vim.keymap.set("i", "<Tab>", "<Esc>")
 vim.keymap.set("n", "U", "<C-r>", { desc = "Redo" })
 vim.keymap.set("n", "<C-j>", "gJi <ESC>ciW <ESC>", { desc = "Join lines (and remove excess whitespace)" })
-vim.keymap.set("n", "s", "<cmd>wa<cr>", { desc = "Save" })
+-- vim.keymap.set("n", "s", ":bufdo if empty(getbufvar(bufnr(), '&buftype')) | w | endif<cr>", { desc = "Save" })
 vim.keymap.set("n", "<leader>yf", ":let @+ = expand('%')<cr>", { desc = "Copy current buffer filepath" })
-vim.keymap.set("n", "<leader>q", ":qa<cr>", { desc = "Quit all" })
+vim.keymap.set("n", "<leader>q", ":qa!<cr>", { desc = "Quit all" })
 vim.keymap.set("n", "<C-q>", ":q<cr>", { desc = "Quit" })
 vim.keymap.set("n", "<leader>h", ":nohlsearch<cr>", { desc = "No Highlight" })
 vim.keymap.set("n", "<leader>A", "gg0vG$y", { desc = "Copy all" })
@@ -78,6 +79,20 @@ vim.keymap.set("n", "<leader>'", "ciw''<ESC>P", { desc = "Surround word with sin
 vim.keymap.set("n", '<leader>"', 'ciw""<ESC>P', { desc = "Surround word with double quotes" })
 vim.keymap.set("n", '<leader>(', 'ciw()<ESC>P', { desc = "Surround word with parens" })
 vim.keymap.set("n", '<leader>{', 'ciw{}<ESC>P', { desc = "Surround word with curly brackets" })
+
+vim.keymap.set("n", "s", function()
+  -- save all valid, non-terminal buffers
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(buf) and
+       vim.bo[buf].buflisted and
+       vim.bo[buf].buftype ~= 'terminal' and
+       vim.bo[buf].modified then
+      vim.api.nvim_buf_call(buf, function()
+        vim.cmd('write')
+      end)
+    end
+  end
+end, { desc = "Save" })
 
 vim.keymap.set("n", '<leader>o', function()
   local line = vim.fn.line('.')
@@ -137,7 +152,7 @@ vim.keymap.set("n", "t", ":BuffersNext<cr>", { desc = "Next buffer" })
 vim.keymap.set("n", "T", ":BuffersPrev<cr>", { desc = "Prev buffer" })
 vim.keymap.set("n", "<C-e>", ":BuffersMovePrev<cr>", { desc = "Move buffer up" })
 vim.keymap.set("n", "<C-n>", ":BuffersMoveNext<cr>", { desc = "Move buffer down" })
-vim.keymap.set("n", "<leader>C", ":%bd | NvimTreeFocus | NvimTreeCollapse | NvimTreeRefresh<cr>gg", { desc = "Close all buffers" })
+vim.keymap.set("n", "<leader>C", ":%bd | NvimTreeCollapse<cr>", { desc = "Close all buffers" })
 vim.keymap.set("n", "<leader>c", function()
   local bufnr = vim.api.nvim_get_current_buf()
   vim.cmd('bp')

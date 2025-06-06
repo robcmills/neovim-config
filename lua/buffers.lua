@@ -36,14 +36,15 @@ It exposes methods to:
 The code is as simple and minimal as possible.
 The code is written in lua.
 
+
 TODO:
-  - fix issue when deleting all buffers except for terminal
+  - fix issues with loading sessions
+  - enable arbitrary edits to buffers list and reconcile (oil.nvim)
   - add icons
   - when deleting a buffer in nvim-tree, if deleted buffer is active, then its window is closed,
     causing the buffers window to become "full screen" and get into a bad state.
     Perhaps when selecting a buffer, make a check to see if the "last active" buffer has a window,
     and if not create one.
-  - show parent dir if a buffer name is duplicated in the list
 
 ]]
 

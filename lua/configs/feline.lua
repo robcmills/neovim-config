@@ -6,13 +6,13 @@ end
 
 local lsp_client_names = function()
   local buf_client_names = {}
-  for _, client in pairs(vim.lsp.buf_get_clients(0)) do
+  for _, client in pairs(vim.lsp.get_clients()) do
     table.insert(buf_client_names, client.name)
   end
   return table.concat(buf_client_names, ", ")
 end
 
-require 'feline'.setup {
+require('feline').setup({
   disable = { filetypes = { '^NvimTree$', '^neo%-tree$', '^dashboard$', '^Outline$', '^aerial$' } },
   components = {
     active = {
@@ -31,4 +31,4 @@ require 'feline'.setup {
       },
     },
   },
-}
+})
