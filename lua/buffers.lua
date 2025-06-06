@@ -1,10 +1,10 @@
 --[[
-A neovim plugin called "vertical-buffers" that renders the open buffers on the right in a vertical split. 
+A neovim plugin called "vertical-buffers-list" that renders the open buffers in a vertical split. 
 Inspired by vertical tabs sidebars in some browsers (Arc, Brave).
 
 Current behaviors:
 
-Renders only filenames, unless the filename is index.*, in which case it renders the name of the parent directory like so:
+Renders only filenames, unless the filename is index.* or duplicates exist, in which case it renders the name of the parent directory like so:
 ```
 fileA.ts
 fileB.ts
@@ -24,20 +24,23 @@ It renders buffers top to bottom in the order they were opened by default, but i
 
 Buffer names are colored based on their focus order:
 - Most recently active buffer (a): white (configurable)
-- Previously active buffer (b): soft cyan (configurable)
+- Previously active buffer (b): soft (configurable)
 - All other buffers: gray (configurable)
 
-Buffers window is a configurable fixed width (default 50).
+Buffers window width is configurable to either a fixed width or auto.
 
 It exposes methods to:
 - show/focus the buffer list
 - hide the buffer list
+- re-order the buffers
 
 The code is as simple and minimal as possible.
 The code is written in lua.
 
 
 TODO:
+  - handle :file renames
+  - handle filesystem changes (e.g. rm, mv, cp)
   - fix issues with loading sessions
   - enable arbitrary edits to buffers list and reconcile (oil.nvim)
   - add icons
@@ -52,7 +55,7 @@ TODO:
 Example configuration:
 
 require('buffers').setup({
-  width = 50, -- or 'auto' to automatically fit to longest buffer name
+  width = 'auto',
   min_width = 25, -- minimum width when using auto width (default: 25)
   side = "left", -- "left" or "right" (default: "left")
   colors = {
@@ -94,7 +97,7 @@ local M = {}
 local state = {
   win = nil,
   buf = nil,
-  buffer_order = {}, -- Array of buffer numbers in order they were opened
+  buffer_order = {}, -- Array of buffer numbers in order they were opened (modifiable by user)
   focus_order = {}, -- Array of buffer numbers in focus order (most recent first)
   config = {
     width = 'auto',
@@ -296,21 +299,11 @@ local function render()
 
   -- Render lines
   local lines = {}
-  local alternate_bufnr = vim.fn.bufnr('#')
-  local current_bufnr = vim.api.nvim_get_current_buf()
 
   for _, bufnr in ipairs(buffers) do
     local name = get_buffer_name(bufnr, buffers)
     local letter = letter_map[bufnr]
-    local indicator
-    if bufnr == current_bufnr then
-      indicator = "%"
-    elseif bufnr == alternate_bufnr then
-      indicator = "#"
-    else
-      indicator = " "
-    end
-    table.insert(lines, string.format("%s %s %s", letter, indicator, name))
+    table.insert(lines, string.format("%s %s", letter, name))
   end
 
   vim.bo[state.buf].modifiable = true
@@ -348,7 +341,7 @@ local function render()
     -- Calculate the start and end positions for the buffer name
     local name = get_buffer_name(bufnr, buffers)
     local letter = letter_map[bufnr]
-    local name_start = string.len(letter) + 3
+    local name_start = string.len(letter) + 1
     local name_end = name_start + string.len(name)
 
     -- Apply highlight to the buffer name only
@@ -388,7 +381,7 @@ local function create_window()
     vim.bo[state.buf].buftype = "nofile"
     vim.bo[state.buf].bufhidden = "hide"
     vim.bo[state.buf].swapfile = false
-    -- vim.api.nvim_buf_set_name(state.buf, "Buffers")
+    vim.api.nvim_buf_set_name(state.buf, "VerticalBuffersList")
   end
 
   -- Create window

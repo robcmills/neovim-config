@@ -166,6 +166,9 @@ vim.keymap.set("n", "<leader>n", function()
   end
 end, { desc = "New buffer" })
 
+-- winbar
+-- vim.opt.winbar = '%f'
+
 -- indent
 vim.keymap.set("v", "<", "<gv", { desc = "Decrease indent without losing selection" })
 vim.keymap.set("v", ">", ">gv", { desc = "Increase indent without losing selection" })
