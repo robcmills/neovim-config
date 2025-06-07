@@ -117,24 +117,30 @@ vim.keymap.set('n', '!', toggle_boolean, { desc = 'Toggle Boolean' })
 vim.opt.scrollback = 50000
 vim.o.shell = "bash -l" -- use "login" bash to source .bash_profile
 -- vim.o.shell = "/Applications/fish.app/Contents/Resources/base/usr/local/bin/fish"
+
 vim.keymap.set('n', '<leader>t', function()
   vim.cmd('term')
   vim.wait(1)
   vim.cmd('startinsert')
-end, { desc = 'Terminal' })
+end, { desc = 'Open a terminal buffer' })
+
 vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', { desc = 'Exit insert mode in terminal' })
+
 vim.keymap.set('t', '<C-k>', function()
   vim.fn.feedkeys("", 'n')
   local sb = vim.bo.scrollback
   vim.bo.scrollback = 1
   vim.bo.scrollback = sb
 end, { desc = 'Clear terminal' })
-vim.cmd [[
-  augroup terminal
-    autocmd!
-    autocmd TermOpen * setlocal nonumber norelativenumber
-  augroup END
-]]
+
+vim.api.nvim_create_autocmd("TermOpen", {
+  group = vim.api.nvim_create_augroup("terminal", { clear = true }),
+  callback = function()
+    vim.opt_local.number = false
+    vim.opt_local.relativenumber = false
+    vim.opt_local.signcolumn = 'no'
+  end,
+})
 
 -- window nav
 vim.keymap.set("n", "<leader>w", "<C-w>w", { desc = "Move to next window", noremap = true })
