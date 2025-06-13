@@ -158,12 +158,22 @@ vim.keymap.set("n", "t", ":BuffersNext<cr>", { desc = "Next buffer" })
 vim.keymap.set("n", "T", ":BuffersPrev<cr>", { desc = "Prev buffer" })
 vim.keymap.set("n", "<C-e>", ":BuffersMovePrev<cr>", { desc = "Move buffer up" })
 vim.keymap.set("n", "<C-n>", ":BuffersMoveNext<cr>", { desc = "Move buffer down" })
-vim.keymap.set("n", "<leader>C", ":%bd | NvimTreeCollapse<cr>", { desc = "Close all buffers" })
+
+vim.keymap.set("n", "<leader>C", function()
+  vim.cmd('NvimTreeCollapse')
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buflisted and vim.bo[buf].buftype ~= "terminal" then
+      vim.api.nvim_buf_delete(buf, { force = true })
+    end
+  end
+end, { desc = "Close all buffers" })
+
 vim.keymap.set("n", "<leader>c", function()
   local bufnr = vim.api.nvim_get_current_buf()
   vim.cmd('bp')
   vim.api.nvim_buf_delete(bufnr, { force = true })
 end, { desc = "Close buffer" })
+
 vim.keymap.set("n", "<leader>n", function()
   local filename = vim.fn.input('Filename: ')
   if filename then
@@ -388,7 +398,7 @@ vim.api.nvim_create_autocmd('TextYankPost', {
 
 
 -- nvim-pvg
-vim.keymap.set('n', '<leader>v', ':lua require("nvim-pvg").search()<cr>', { desc = 'pvg' })
+-- vim.keymap.set('n', '<leader>v', ':lua require("nvim-pvg").search()<cr>', { desc = 'pvg' })
 
 -- copilot
 vim.keymap.set("i", "<C-l>", function()
@@ -456,5 +466,7 @@ end, {})
 vim.keymap.set('n', '<leader>u', ':.lua<cr>', { desc = 'Execute current line of lua' })
 vim.keymap.set('v', '<leader>u', ':lua<cr>', { desc = 'Execute selected lua' })
 
-package.loaded['buffers'] = nil
+-- package.loaded['buffers'] = nil
 require('buffers').setup()
+
+-- require('splash')

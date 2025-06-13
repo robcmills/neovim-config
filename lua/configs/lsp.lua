@@ -163,6 +163,7 @@ lspconfig.lua_ls.setup {
 }
 
 vim.lsp.set_log_level("debug")
+
 lspconfig.ts_ls.setup {
   cmd = {
     'typescript-language-server',
@@ -177,12 +178,23 @@ lspconfig.ts_ls.setup {
       quotePreference = 'single',
     },
   },
+  root_dir = lspconfig.util.root_pattern("package.json"),
+  single_file_support = false,
   -- settings = {
   --   syntaxes = {
   --     "Packages/TypeScript Syntax/TypeScript.tmLanguage",
   --     "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage",
   --   },
   -- },
+}
+
+-- deno config
+vim.g.markdown_fenced_languages = {
+  "ts=typescript"
+}
+lspconfig.denols.setup {
+  on_attach = on_attach,
+  root_dir = lspconfig.util.root_pattern("deno.json", "deno.jsonc"),
 }
 
 --Enable (broadcasting) snippet capability for completion

@@ -39,6 +39,9 @@ The code is written in lua.
 
 
 TODO:
+  - add debug log to file
+  - add option to show buffers list in a floating window
+  - fix repeated calls to :BuffersMove* not working
   - handle :file renames
   - handle filesystem changes (e.g. rm, mv, cp)
   - fix issues with loading sessions
@@ -48,6 +51,7 @@ TODO:
     causing the buffers window to become "full screen" and get into a bad state.
     Perhaps when selecting a buffer, make a check to see if the "last active" buffer has a window,
     and if not create one.
+  - quickfind buffer appears in buffers list
 
 ]]
 
