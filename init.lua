@@ -466,7 +466,12 @@ end, {})
 vim.keymap.set('n', '<leader>u', ':.lua<cr>', { desc = 'Execute current line of lua' })
 vim.keymap.set('v', '<leader>u', ':lua<cr>', { desc = 'Execute selected lua' })
 
--- package.loaded['buffers'] = nil
+package.loaded['buffers'] = nil
 require('buffers').setup()
+
+vim.api.nvim_create_user_command('BuffersReset', function()
+  package.loaded['buffers'] = nil
+  require('buffers').setup()
+end, { desc = 'Reset Buffers plugin' })
 
 -- require('splash')

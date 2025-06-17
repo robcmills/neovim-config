@@ -379,7 +379,17 @@ local function create_window()
   -- Set up highlight groups
   setup_highlights()
 
-  -- Get or create buffer
+  -- Check if buffer already exists
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    local buf_name = vim.api.nvim_buf_get_name(bufnr)
+    local filename = vim.fn.fnamemodify(buf_name, ":t")
+    if filename == "VerticalBuffersList" then
+      state.buf = bufnr
+      break
+    end
+  end
+
+  -- Create buffer
   if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
     state.buf = vim.api.nvim_create_buf(false, true)
     vim.bo[state.buf].buftype = "nofile"
