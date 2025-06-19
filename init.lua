@@ -80,13 +80,16 @@ vim.keymap.set("n", '<leader>"', 'ciw""<ESC>P', { desc = "Surround word with dou
 vim.keymap.set("n", '<leader>(', 'ciw()<ESC>P', { desc = "Surround word with parens" })
 vim.keymap.set("n", '<leader>{', 'ciw{}<ESC>P', { desc = "Surround word with curly brackets" })
 
+vim.keymap.set("n", "<leader>d", "ggVGx", { desc = "Clear current buffer" })
+
 vim.keymap.set("n", "s", function()
   -- save all valid, non-terminal buffers
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_loaded(buf) and
        vim.bo[buf].buflisted and
        vim.bo[buf].buftype ~= 'terminal' and
-       vim.bo[buf].modified then
+       vim.bo[buf].modified
+    then
       vim.api.nvim_buf_call(buf, function()
         vim.cmd('write')
       end)
@@ -199,9 +202,9 @@ end, { desc = "Grep" })
 vim.keymap.set("n", "<leader>r", function()
   require("telescope.builtin").lsp_references()
 end, { desc = "Search references" })
-vim.keymap.set("n", "<leader>d", function()
-  require("telescope.builtin").diagnostics()
-end, { desc = "Search diagnostics" })
+-- vim.keymap.set("n", "<leader>d", function()
+--   require("telescope.builtin").diagnostics()
+-- end, { desc = "Search diagnostics" })
 -- vim.keymap.set("n", "<leader>b", function()
 --   require("telescope.builtin").buffers()
 -- end, { desc = "Search buffers" })

@@ -44,7 +44,7 @@ TODO:
   - fix repeated calls to :BuffersMove* not working
   - handle :file renames
   - handle filesystem changes (e.g. rm, mv, cp)
-  - fix issues with loading sessions
+  - fix issues with saving/loading sessions with terminal buffers
   - enable arbitrary edits to buffers list and reconcile (oil.nvim)
   - add icons
   - when deleting a buffer in nvim-tree, if deleted buffer is active, then its window is closed,
