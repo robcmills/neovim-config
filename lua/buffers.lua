@@ -29,8 +29,13 @@ Buffer names are colored based on their focus order:
 
 Buffers window width is configurable to either a fixed width or auto.
 
+The window can be displayed in three positions:
+- "left": Vertical split on the left side (default)
+- "right": Vertical split on the right side
+- "float": Centered floating window that closes when a buffer is selected
+
 It exposes methods to:
-- show/focus the buffer list
+- show/focus the buffer list (with optional position argument)
 - hide the buffer list
 - re-order the buffers
 
@@ -70,6 +75,15 @@ require('buffers').setup({
     inactive = { link = "Comment" }, -- All other buffers
   }
 })
+
+Usage:
+- :BuffersShow - Show buffer list using default position (left)
+- :BuffersShow left - Show buffer list on the left
+- :BuffersShow right - Show buffer list on the right
+- :BuffersShow float - Show buffer list in a floating window
+- :BuffersShowLeft - Show buffer list on the left
+- :BuffersShowRight - Show buffer list on the right
+- :BuffersShowFloat - Show buffer list in a floating window
 
 Colors values are highlight definition maps (see nvim_set_hl):
 ]]
@@ -371,7 +385,7 @@ local function render()
 end
 
 -- Create buffer window
-local function create_window()
+local function create_window(position)
   if state.win and vim.api.nvim_win_is_valid(state.win) then
     return
   end
@@ -389,7 +403,7 @@ local function create_window()
     end
   end
 
-  -- Create buffer
+  -- Create buffer if it doesn't exist
   if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
     state.buf = vim.api.nvim_create_buf(false, true)
     vim.bo[state.buf].buftype = "nofile"
@@ -398,17 +412,48 @@ local function create_window()
     vim.api.nvim_buf_set_name(state.buf, "VerticalBuffersList")
   end
 
-  -- Create window
-  vim.cmd("vsplit")
-  if state.config.side == "right" then
-    vim.cmd("wincmd L")
+  -- Create window based on position
+  if position == "float" then
+    -- Create floating window
+    local width = get_effective_width()
+    local height = math.min(20, #get_ordered_buffers()) -- Limit height, add 2 for padding
+
+    local ui = vim.api.nvim_list_uis()[1]
+    local screen_width = ui.width
+    local screen_height = ui.height
+
+    local win_width = math.min(width, screen_width - 4)
+    local win_height = math.min(height, screen_height - 4)
+
+    local row = math.floor((screen_height - win_height) / 2)
+    local col = math.floor((screen_width - win_width) / 2)
+
+    local opts = {
+      relative = "editor",
+      width = win_width,
+      height = win_height,
+      row = row,
+      col = col,
+      style = "minimal",
+      border = "rounded"
+    }
+
+    state.win = vim.api.nvim_open_win(state.buf, true, opts)
   else
-    vim.cmd("wincmd H")
+    -- Create split window
+    vim.cmd("vsplit")
+    if position == "right" then
+      vim.cmd("wincmd L")
+    else
+      vim.cmd("wincmd H")
+    end
+
+    state.win = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_width(state.win, get_effective_width())
+    vim.wo[state.win].winfixwidth = true
   end
-  state.win = vim.api.nvim_get_current_win()
+
   vim.api.nvim_win_set_buf(state.win, state.buf)
-  vim.api.nvim_win_set_width(state.win, get_effective_width())
-  vim.wo[state.win].winfixwidth = true
   vim.wo[state.win].number = false
   vim.wo[state.win].relativenumber = false
   vim.wo[state.win].signcolumn = "no"
@@ -423,17 +468,46 @@ local function create_window()
       callback = function()
         if state.letter_map and state.letter_map[letter] then
           local target_bufnr = state.letter_map[letter]
-          -- Find the previously focused window (not the current buffer list window)
-          local current_win = vim.api.nvim_get_current_win()
-          local wins = vim.api.nvim_list_wins()
-          for _, win in ipairs(wins) do
-            if win ~= current_win and vim.api.nvim_win_is_valid(win) then
-              vim.api.nvim_win_set_buf(win, target_bufnr)
-              vim.api.nvim_set_current_win(win)
-              break
+
+          if position == "float" then
+            -- For floating window, close it and switch to target buffer
+            vim.api.nvim_win_close(state.win, true)
+            state.win = nil
+            vim.api.nvim_set_current_buf(target_bufnr)
+          else
+            -- For split windows, find another window and switch to target buffer
+            local current_win = vim.api.nvim_get_current_win()
+            local wins = vim.api.nvim_list_wins()
+            for _, win in ipairs(wins) do
+              if win ~= current_win and vim.api.nvim_win_is_valid(win) then
+                vim.api.nvim_win_set_buf(win, target_bufnr)
+                vim.api.nvim_set_current_win(win)
+                break
+              end
             end
           end
         end
+      end,
+      noremap = true,
+      silent = true
+    })
+  end
+
+  -- Add Escape key to close floating window
+  if position == "float" then
+    vim.api.nvim_buf_set_keymap(state.buf, "n", "<Esc>", "", {
+      callback = function()
+        vim.api.nvim_win_close(state.win, true)
+        state.win = nil
+      end,
+      noremap = true,
+      silent = true
+    })
+
+    vim.api.nvim_buf_set_keymap(state.buf, "n", "q", "", {
+      callback = function()
+        vim.api.nvim_win_close(state.win, true)
+        state.win = nil
       end,
       noremap = true,
       silent = true
@@ -452,13 +526,16 @@ local function track_buffer(bufnr)
 end
 
 -- Public functions
-function M.show()
+---@param position string|nil Position for the buffer window ("left", "right", or "float")
+function M.show(position)
   if state.win and vim.api.nvim_win_is_valid(state.win) then
     vim.api.nvim_set_current_win(state.win)
+    render()
   else
-    create_window()
+    -- Use provided position or fall back to config side
+    local window_position = position or state.config.side
+    create_window(window_position)
   end
-  render()
 end
 
 function M.hide()
@@ -593,8 +670,29 @@ function M.setup(config)
   setup_highlights()
 
   -- Set up user commands
-  vim.api.nvim_create_user_command("BuffersShow", M.show, {
-    desc = "Show buffer list"
+  vim.api.nvim_create_user_command("BuffersShow", function(args)
+    M.show(args.args ~= "" and args.args or nil)
+  end, {
+    desc = "Show buffer list (optional: left, right, or float)",
+    nargs = "?"
+  })
+
+  vim.api.nvim_create_user_command("BuffersShowLeft", function()
+    M.show("left")
+  end, {
+    desc = "Show buffer list on the left"
+  })
+
+  vim.api.nvim_create_user_command("BuffersShowRight", function()
+    M.show("right")
+  end, {
+    desc = "Show buffer list on the right"
+  })
+
+  vim.api.nvim_create_user_command("BuffersShowFloat", function()
+    M.show("float")
+  end, {
+    desc = "Show buffer list in a floating window"
   })
 
   vim.api.nvim_create_user_command("BuffersHide", M.hide, {
