@@ -489,3 +489,9 @@ end, { desc = 'Reset Buffers plugin' })
 require('prompt').setup()
 vim.keymap.set('n', '<leader>i', ':Prompt<cr>', { desc = 'Prompt' })
 
+vim.api.nvim_create_user_command('Messages', function()
+  vim.cmd('enew')
+  vim.api.nvim_buf_set_lines(0, 0, -1, false,
+    vim.split(vim.fn.execute('messages'), '\n', { plain = true })
+  )
+end, { desc = 'Dump messages into a new buffer' })
