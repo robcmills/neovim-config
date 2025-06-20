@@ -132,10 +132,12 @@ lspconfig.lua_ls.setup {
   on_attach = function(client, bufnr)
     --    client.resolved_capabilities.document_formatting = false
     on_attach(client, bufnr)
-    map("n", "<leader>lf", function()
+    vim.keymap.set("n", "<leader>lf", function()
       vim.lsp.buf.format {
-        tabSize = 2,
-        insertSpaces = true,
+        format_opts = {
+          tabSize = 2,
+          insertSpaces = true,
+        },
       }
     end, { desc = "Format lua code", buffer = bufnr })
   end,
@@ -162,7 +164,28 @@ lspconfig.lua_ls.setup {
   },
 }
 
-vim.lsp.set_log_level("debug")
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "lua",
+  callback = function()
+    vim.bo.shiftwidth = 2 -- Set 'shiftwidth' to 2
+    vim.bo.tabstop = 2    -- Set 'tabstop' to 2
+    vim.bo.expandtab = true -- Use spaces instead of tabs
+
+    -- Optionally set up custom format command using LSP
+    vim.keymap.set("n", "<leader>f", function()
+      vim.lsp.buf.format({
+        filter = function(client)
+          return client.name == "lua_ls" -- your LSP client name for Lua
+        end,
+        format_opts = {
+          tabSize = 2,
+        },
+      })
+    end, { buffer = true })
+  end,
+})
+
+-- vim.lsp.set_log_level("debug")
 
 lspconfig.ts_ls.setup {
   cmd = {

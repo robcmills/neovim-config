@@ -38,7 +38,9 @@ require('prompt').setup({
 
 ### Todo
 
-- Don't delete buffer when leaving window
+- Tab size 2 spaces
+- Resize window when buffer lines length exceeds window height
+- Resize window when buffer longest line width exceeds window width
 - Flatten stdout handler
 - Move state into object
 - Disable buffer editing when streaming response
@@ -99,10 +101,21 @@ local function create_markdown_buffer()
     vim.bo[bufnr].modifiable = true
     vim.bo[bufnr].buftype = 'nofile'
     vim.bo[bufnr].swapfile = false
-    vim.bo[bufnr].bufhidden = "wipe"
+    vim.bo[bufnr].bufhidden = "hide"
     vim.bo[bufnr].filetype = "markdown"
     vim.api.nvim_buf_set_name(bufnr, "prompt://markdown")
     return bufnr
+end
+
+local function get_or_create_prompt_buffer()
+    -- If we already have a valid prompt buffer, return it
+    if prompt_bufnr and vim.api.nvim_buf_is_valid(prompt_bufnr) then
+        return prompt_bufnr
+    end
+
+    -- Otherwise create a new one
+    prompt_bufnr = create_markdown_buffer()
+    return prompt_bufnr
 end
 
 local function setup_keymaps(bufnr)
@@ -115,19 +128,7 @@ end
 local function setup_autocommands(bufnr)
     local group = vim.api.nvim_create_augroup("PromptWindow", { clear = true })
 
-    -- Close window when buffer is deleted
-    vim.api.nvim_create_autocmd("BufWipeout", {
-        group = group,
-        buffer = bufnr,
-        callback = function()
-            if prompt_winid and vim.api.nvim_win_is_valid(prompt_winid) then
-                vim.api.nvim_win_close(prompt_winid, true)
-                prompt_winid = nil
-            end
-        end,
-    })
-
-    -- Close window when leaving it
+    -- Close window when leaving it (but don't delete buffer)
     vim.api.nvim_create_autocmd("WinLeave", {
         group = group,
         buffer = bufnr,
@@ -319,17 +320,18 @@ function M.open_prompt()
         M.close_prompt()
     end
 
-    prompt_bufnr = create_markdown_buffer()
+    -- Get or create the prompt buffer (this will reuse existing content)
+    local bufnr = get_or_create_prompt_buffer()
 
     local win_opts = center_window()
-    prompt_winid = vim.api.nvim_open_win(prompt_bufnr, true, win_opts)
+    prompt_winid = vim.api.nvim_open_win(bufnr, true, win_opts)
 
     vim.wo[prompt_winid].wrap = true
     vim.wo[prompt_winid].linebreak = true
     vim.wo[prompt_winid].cursorline = true
 
-    setup_keymaps(prompt_bufnr)
-    setup_autocommands(prompt_bufnr)
+    setup_keymaps(bufnr)
+    setup_autocommands(bufnr)
 
     vim.cmd("startinsert")
 end
@@ -338,11 +340,6 @@ function M.close_prompt()
     if prompt_winid and vim.api.nvim_win_is_valid(prompt_winid) then
         vim.api.nvim_win_close(prompt_winid, true)
         prompt_winid = nil
-    end
-
-    if prompt_bufnr and vim.api.nvim_buf_is_valid(prompt_bufnr) then
-        vim.api.nvim_buf_delete(prompt_bufnr, { force = true })
-        prompt_bufnr = nil
     end
 end
 
