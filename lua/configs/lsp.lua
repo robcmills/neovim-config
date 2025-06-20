@@ -177,7 +177,8 @@ vim.api.nvim_create_autocmd("FileType", {
         filter = function(client)
           return client.name == "lua_ls" -- your LSP client name for Lua
         end,
-        format_opts = {
+        formatting_options = {
+          insertSpaces = true,
           tabSize = 2,
         },
       })
