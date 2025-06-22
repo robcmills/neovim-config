@@ -11,10 +11,13 @@ Features:
 - Automatically enters insert mode for immediate typing
 - Configurable window size and appearance
 - Submit prompt to OpenRouter API for AI completion
+- Autosaves prompts and responses to history directory
+- Create a new prompt with :PromptNew command
 
 Usage:
-- Command :Prompt
-- Command :PromptSubmit
+- Command :Prompt - Open a floating markdown prompt window
+- Command :PromptSubmit - Submit prompt to OpenRouter API for AI completion
+- Command :PromptNew - Create a new prompt (clears current buffer)
 
 Configuration:
 You can customize the plugin by calling require('prompt').setup() with options:
@@ -25,7 +28,8 @@ You can customize the plugin by calling require('prompt').setup() with options:
     title = " Prompt ", -- Window title
     title_pos = "center", -- Title position
     model = "anthropic/claude-3.5-sonnet", -- OpenRouter model to use
-    response_delineator = "● %s ────────────" -- Format for response delineator
+    response_delineator = "● %s ────────────", -- Format for response delineator
+    history_dir = "prompt_history/" -- Directory to save chat history
 }
 
 Example:
@@ -33,22 +37,30 @@ require('prompt').setup({
     width = 100,
     height = 25,
     border = "double",
-    model = "openai/gpt-4o"
+    model = "openai/gpt-4o",
+    history_dir = "~/.local/share/nvim/prompt_history/"
 })
+
+Autosave Feature:
+- Automatically saves prompts and responses to files in the history directory
+- Filenames use ISO datetime format (e.g., "2025-06-21T04:27:18.md")
+- Saves prompt content before submitting to API
+- Syncs final content (including response) when streaming completes
+- Use :PromptNew to start a fresh conversation
 
 ### Todo
 
-- Tab size 2 spaces
+- Enable side panel for prompt window
 - Resize window when buffer lines length exceeds window height
 - Resize window when buffer longest line width exceeds window width
 - Flatten stdout handler
 - Move state into object
 - Disable buffer editing when streaming response
 - Enable cancellation of streaming request
-- Persist chats
 - Model picker
 - UI for configuration and key bindings
 - Tests
+- Quitting nvim while prompt window is open throws many errors
 
 --]]
 
@@ -65,13 +77,65 @@ local config = {
   title_pos = "right",
   model = "anthropic/claude-sonnet-4",
   response_delineator = "● %s ────────────",
+  history_dir = "prompt_history/",
 }
 
 -- State
 local prompt_bufnr = nil
 local prompt_winid = nil
+local current_chat_id = nil
 
 -- Utility functions
+
+local function get_history_dir()
+  local dir = config.history_dir
+  if string.sub(dir, 1, 1) == "~" then
+    dir = vim.fn.expand(dir)
+  end
+  return dir
+end
+
+local function ensure_history_dir()
+  local dir = get_history_dir()
+  if vim.fn.isdirectory(dir) == 0 then
+    vim.fn.mkdir(dir, "p")
+  end
+end
+
+local function generate_chat_id()
+  local timestamp = os.date("%Y-%m-%dT%H:%M:%S")
+  return timestamp .. ".md"
+end
+
+local function save_chat_history(chat_id, content)
+  ensure_history_dir()
+  local filepath = get_history_dir() .. chat_id
+  local file = io.open(filepath, "w")
+  if file then
+    file:write(content)
+    file:close()
+  else
+    vim.notify("Failed to save chat history to " .. filepath, vim.log.levels.ERROR)
+  end
+end
+
+local function get_buffer_content(bufnr)
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  return table.concat(lines, "\n")
+end
+
+local function sync_chat_history()
+  if not current_chat_id then
+    return
+  end
+
+  if not prompt_bufnr or not vim.api.nvim_buf_is_valid(prompt_bufnr) then
+    return
+  end
+
+  local content = get_buffer_content(prompt_bufnr)
+  save_chat_history(current_chat_id, content)
+end
 
 local function center_window()
   local width = config.width
@@ -141,11 +205,6 @@ end
 
 -- OpenRouter API functions
 
-local function get_buffer_content(bufnr)
-  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  return table.concat(lines, "\n")
-end
-
 local function add_response_delineator(bufnr, model)
   if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
     print('add_response_delineator: buffer not valid')
@@ -208,6 +267,9 @@ local function submit_prompt()
     vim.notify("Prompt buffer is empty.", vim.log.levels.WARN)
     return
   end
+
+  current_chat_id = generate_chat_id()
+  save_chat_history(current_chat_id, content)
 
   add_response_delineator(prompt_bufnr, config.model)
 
@@ -295,6 +357,9 @@ local function submit_prompt()
     vim.schedule(function()
       if obj.code ~= 0 then
         vim.notify("OpenRouter API request failed with exit code: " .. obj.code, vim.log.levels.ERROR)
+      else
+        -- Sync the final content including response to history file
+        sync_chat_history()
       end
       if prompt_bufnr and vim.api.nvim_buf_is_valid(prompt_bufnr) then
         vim.bo[prompt_bufnr].modifiable = true
@@ -344,6 +409,12 @@ function M.close_prompt()
   end
 end
 
+function M.clear_prompt()
+  if prompt_bufnr and vim.api.nvim_buf_is_valid(prompt_bufnr) then
+    vim.api.nvim_buf_set_lines(prompt_bufnr, 0, -1, false, {})
+  end
+end
+
 -- Setup function
 function M.setup(opts)
   if opts then
@@ -359,5 +430,14 @@ end, { desc = "Open a floating markdown prompt window" })
 vim.api.nvim_create_user_command("PromptSubmit", function()
   submit_prompt()
 end, { desc = "Submit prompt to OpenRouter API for AI completion" })
+
+vim.api.nvim_create_user_command("PromptNew", function()
+  M.clear_prompt()
+  current_chat_id = nil
+  -- Open the prompt window if not already open
+  if not prompt_winid or not vim.api.nvim_win_is_valid(prompt_winid) then
+    M.open_prompt()
+  end
+end, { desc = "Create a new prompt" })
 
 return M
