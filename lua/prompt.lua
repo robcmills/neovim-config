@@ -54,7 +54,7 @@ Autosave Feature:
 
 ### Todo
 
-- Fix issue with local history_dir
+- PromptHistory command
 - Add support for chats longer than one question and answer
 - Enable side panel for prompt window
 - Resize window when buffer lines length exceeds window height
@@ -84,7 +84,7 @@ local config = {
   title_pos = "right",
   model = "anthropic/claude-sonnet-4",
   response_delineator = "● %s ────────────",
-  history_dir = "prompt_history/",
+  history_dir = "~/.local/share/nvim/prompt_history/",
   max_filename_length = 50,
   window_position = "right", -- "center", "left", or "right"
 }
