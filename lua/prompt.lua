@@ -31,6 +31,7 @@ You can customize the plugin by calling require('prompt').setup() with options:
     response_delineator = "● %s ────────────", -- Format for response delineator
     history_dir = "prompt_history/", -- Directory to save chat history
     max_filename_length = 50, -- Maximum length for generated filename summaries
+    window_position = "center", -- Window position: "center", "left", or "right"
 }
 
 Example:
@@ -40,7 +41,8 @@ require('prompt').setup({
     border = "double",
     model = "openai/gpt-4o",
     history_dir = "~/.local/share/nvim/prompt_history/",
-    max_filename_length = 60
+    max_filename_length = 60,
+    window_position = "right" -- Opens prompt window on the right side, full height
 })
 
 Autosave Feature:
@@ -83,6 +85,7 @@ local config = {
   response_delineator = "● %s ────────────",
   history_dir = "prompt_history/",
   max_filename_length = 50,
+  window_position = "right", -- "center", "left", or "right"
 }
 
 -- State
@@ -143,14 +146,29 @@ local function sync_chat_history()
 end
 
 local function get_window_config()
-  local width = config.width
-  local height = config.height
-
   local screen_width = vim.o.columns
   local screen_height = vim.o.lines
+  local position = config.window_position or "center"
 
-  local col = math.floor((screen_width - width) / 2)
-  local row = math.floor((screen_height - height) / 2)
+  local width, height, col, row
+
+  if position == "left" then
+    width = config.width
+    height = screen_height - 4 -- Full height minus borders
+    col = 0
+    row = 0
+  elseif position == "right" then
+    width = config.width
+    height = screen_height - 4 -- Full height minus borders
+    col = screen_width - width
+    row = 0
+  else
+    -- Default to center positioning
+    width = config.width
+    height = config.height
+    col = math.floor((screen_width - width) / 2)
+    row = math.floor((screen_height - height) / 2)
+  end
 
   return {
     border = config.border,
