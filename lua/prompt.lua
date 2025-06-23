@@ -334,12 +334,6 @@ local function submit_prompt()
       if string.sub(line, 1, 6) == "data: " then
         local json = string.sub(line, 7)
         if json == "[DONE]" then
-          -- Re-enable buffer editing
-          vim.schedule(function()
-            if prompt_bufnr and vim.api.nvim_buf_is_valid(prompt_bufnr) then
-              vim.bo[prompt_bufnr].modifiable = true
-            end
-          end)
           return
         end
 
@@ -358,9 +352,6 @@ local function submit_prompt()
   local function handle_stderr(err, data)
     if err then print('handle_stderr err: ' .. err) end
     if data then print('handle_stderr data: ' .. data) end
-    -- vim.schedule(function()
-    --     vim.notify("OpenRouter API error: " .. data, vim.log.levels.ERROR)
-    -- end)
   end
 
   local function on_exit(obj)
@@ -376,10 +367,6 @@ local function submit_prompt()
       end
     end)
   end
-
-
-  -- Make buffer read-only during streaming
-  -- vim.bo[prompt_bufnr].modifiable = false
 
   vim.system({ "curl", unpack(curl_args) }, {
     stdout_buffered = false,
