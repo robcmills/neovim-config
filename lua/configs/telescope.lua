@@ -93,6 +93,7 @@ telescope.load_extension('fzf')
 -- :lua require('telescope.builtin').live_grep({ glob_pattern = "!node_modules", hidden = false })
 -- :lua require('telescope.builtin').live_grep({ no_ignore = true })
 -- :lua require('telescope.builtin').find_files({ cwd = 'src/js/openapi', no_ignore = true })
+-- :lua require('telescope.builtin').find_files({ cwd = 'prompt_history' })
 
 -- builtin.live_grep({opts})                      *telescope.builtin.live_grep()*
 --     Search for a string and get results live as you type, respects .gitignore

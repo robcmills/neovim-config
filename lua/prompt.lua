@@ -29,7 +29,8 @@ You can customize the plugin by calling require('prompt').setup() with options:
     title_pos = "center", -- Title position
     model = "anthropic/claude-3.5-sonnet", -- OpenRouter model to use
     response_delineator = "● %s ────────────", -- Format for response delineator
-    history_dir = "prompt_history/" -- Directory to save chat history
+    history_dir = "prompt_history/", -- Directory to save chat history
+    max_filename_length = 50, -- Maximum length for generated filename summaries
 }
 
 Example:
@@ -38,7 +39,8 @@ require('prompt').setup({
     height = 25,
     border = "double",
     model = "openai/gpt-4o",
-    history_dir = "~/.local/share/nvim/prompt_history/"
+    history_dir = "~/.local/share/nvim/prompt_history/",
+    max_filename_length = 60
 })
 
 Autosave Feature:
@@ -50,7 +52,6 @@ Autosave Feature:
 
 ### Todo
 
-- Use llm to generate summary save file names
 - Add support for chats longer than one question and answer
 - Enable side panel for prompt window
 - Resize window when buffer lines length exceeds window height
@@ -81,6 +82,7 @@ local config = {
   model = "anthropic/claude-sonnet-4",
   response_delineator = "● %s ────────────",
   history_dir = "prompt_history/",
+  max_filename_length = 50,
 }
 
 -- State
@@ -248,32 +250,34 @@ local function make_openrouter_request(opts)
 
     buffer = buffer .. data
 
-    -- Process complete lines from buffer
-    while true do
-      local line_end = string.find(buffer, "\n")
-      if not line_end then break end
+    if opts.stream then
+      -- Process complete lines from buffer for streaming
+      while true do
+        local line_end = string.find(buffer, "\n")
+        if not line_end then break end
 
-      local line = string.sub(buffer, 1, line_end - 1)
-      buffer = string.sub(buffer, line_end + 1)
+        local line = string.sub(buffer, 1, line_end - 1)
+        buffer = string.sub(buffer, line_end + 1)
 
-      line = vim.trim(line)
+        line = vim.trim(line)
 
-      if string.sub(line, 1, 6) == "data: " then
-        local json = string.sub(line, 7)
-        if json == "[DONE]" then
-          return
-        end
-
-        local success, parsed = pcall(vim.json.decode, json)
-        if success and parsed.choices and parsed.choices[1] and parsed.choices[1].delta and parsed.choices[1].delta.content then
-          if opts.stream and opts.on_delta_content then
-            opts.on_delta_content(parsed.choices[1].delta.content)
+        if string.sub(line, 1, 6) == "data: " then
+          local json = string.sub(line, 7)
+          if json == "[DONE]" then
+            return
           end
-        else
-          print('handle_stdout: failed to parse json data: ' .. json)
+
+          local success, parsed = pcall(vim.json.decode, json)
+          if success and parsed.choices and parsed.choices[1] and parsed.choices[1].delta and parsed.choices[1].delta.content then
+            if opts.on_delta_content then
+              opts.on_delta_content(parsed.choices[1].delta.content)
+            end
+          else
+            print('handle_stdout: failed to parse json data: ' .. json)
+          end
+        elseif string.sub(line, 1, 1) == ":" then
+          -- Ignore SSE comments
         end
-      elseif string.sub(line, 1, 1) == ":" then
-        -- Ignore SSE comments
       end
     end
   end
@@ -287,11 +291,23 @@ local function make_openrouter_request(opts)
     vim.schedule(function()
       if obj.code ~= 0 then
         vim.notify("OpenRouter API request failed with exit code: " .. obj.code, vim.log.levels.ERROR)
-      else
-        if opts.on_success then
+        return
+      end
+
+      if opts.on_success then
+        if opts.stream then
           opts.on_success()
+        else
+          -- For non-streaming requests, parse the JSON response and extract content
+          local success, parsed = pcall(vim.json.decode, buffer)
+          if success and parsed.choices and parsed.choices[1] and parsed.choices[1].message and parsed.choices[1].message.content then
+            opts.on_success(parsed.choices[1].message.content)
+          else
+            vim.notify("Failed to parse OpenRouter API response", vim.log.levels.ERROR)
+          end
         end
       end
+
     end)
   end
 
@@ -349,10 +365,83 @@ local function append_to_buffer(bufnr, text)
   end)
 end
 
+local function rename_file(old_path, new_path)
+  local success = os.rename(old_path, new_path)
+  if not success then
+    vim.notify("Failed to rename file from " .. old_path .. " to " .. new_path, vim.log.levels.ERROR)
+    return false
+  end
+  return true
+end
+
+local function sanitize_filename(text)
+  -- Remove punctuation and convert to lowercase
+  local sanitized = string.lower(text)
+  -- Replace spaces and other separators with hyphens
+  sanitized = string.gsub(sanitized, "[%s%p]+", "-")
+  -- Remove multiple consecutive hyphens
+  sanitized = string.gsub(sanitized, "-+", "-")
+  -- Remove leading and trailing hyphens
+  sanitized = string.gsub(sanitized, "^%-+", "")
+  sanitized = string.gsub(sanitized, "%-+$", "")
+  -- Clip to max length
+  if #sanitized > config.max_filename_length then
+    sanitized = string.sub(sanitized, 1, config.max_filename_length)
+    -- Ensure we don't end with a hyphen
+    sanitized = string.gsub(sanitized, "%-+$", "")
+  end
+  return sanitized
+end
+
 local function add_prompt_summary(filename, prompt)
-  -- fetch summary filename
-  -- rename file to filename .. '-' .. summary .. '.md'
-  -- set current_chat_filename to filename-summary
+  local summary_prompt = string.format([[
+Summarize the following Prompt in a single, very short title.
+Format it for a filename, in kebab-case, no spaces, and no punctuation.
+Respond with only the title and nothing else.
+
+<Prompt>
+%s
+</Prompt>
+]], prompt)
+
+  local messages = {
+    { role = "user", content = summary_prompt }
+  }
+
+  local function on_success(summary)
+    if not summary then
+      vim.notify("Failed to generate prompt summary", vim.log.levels.ERROR)
+      return
+    end
+
+    -- Sanitize the summary for filename use
+    local sanitized_summary = sanitize_filename(summary)
+
+    if sanitized_summary == "" then
+      vim.notify("Generated summary is empty, keeping original filename", vim.log.levels.WARN)
+      return
+    end
+
+    -- Create new filename
+    local base_name = string.gsub(filename, "%.md$", "")
+    local new_filename = base_name .. "-" .. sanitized_summary .. ".md"
+
+    -- Rename the file
+    local old_path = get_history_dir() .. filename
+    local new_path = get_history_dir() .. new_filename
+
+    if rename_file(old_path, new_path) then
+      current_chat_filename = new_filename
+      vim.notify("Renamed prompt file to: " .. new_filename, vim.log.levels.INFO)
+    end
+  end
+
+  make_openrouter_request({
+    messages = messages,
+    model = config.model,
+    stream = false,
+    on_success =  on_success
+  })
 end
 
 local function submit_prompt()
@@ -367,7 +456,9 @@ local function submit_prompt()
     return
   end
 
-  current_chat_filename = get_timestamp_filename()
+  if current_chat_filename == nil then
+    current_chat_filename = get_timestamp_filename()
+  end
   save_chat_history(current_chat_filename, buffer_content)
   add_prompt_summary(current_chat_filename, buffer_content)
 
