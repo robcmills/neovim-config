@@ -50,9 +50,12 @@ Autosave Feature:
 
 ### Todo
 
+- Use llm to generate summary save file names
+- Add support for chats longer than one question and answer
 - Enable side panel for prompt window
 - Resize window when buffer lines length exceeds window height
 - Resize window when buffer longest line width exceeds window width
+- Scroll delineator to top when submitting prompt
 - Flatten stdout handler
 - Move state into object
 - Disable buffer editing when streaming response
@@ -83,7 +86,7 @@ local config = {
 -- State
 local prompt_bufnr = nil
 local prompt_winid = nil
-local current_chat_id = nil
+local current_chat_filename = nil
 
 -- Utility functions
 
@@ -102,7 +105,7 @@ local function ensure_history_dir()
   end
 end
 
-local function generate_chat_id()
+local function get_timestamp_filename()
   local timestamp = os.date("%Y-%m-%dT%H:%M:%S")
   return timestamp .. ".md"
 end
@@ -125,7 +128,7 @@ local function get_buffer_content(bufnr)
 end
 
 local function sync_chat_history()
-  if not current_chat_id then
+  if not current_chat_filename then
     return
   end
 
@@ -134,7 +137,7 @@ local function sync_chat_history()
   end
 
   local content = get_buffer_content(prompt_bufnr)
-  save_chat_history(current_chat_id, content)
+  save_chat_history(current_chat_filename, content)
 end
 
 local function center_window()
@@ -251,6 +254,12 @@ local function append_to_buffer(bufnr, text)
   end)
 end
 
+local function add_prompt_summary(filename, prompt)
+  -- fetch summary filename
+  -- rename file to filename .. '-' .. summary .. '.md'
+  -- set current_chat_filename to filename-summary
+end
+
 local function submit_prompt()
   if not prompt_bufnr or not vim.api.nvim_buf_is_valid(prompt_bufnr) then
     vim.notify("No prompt buffer found. Use :Prompt first.", vim.log.levels.WARN)
@@ -268,8 +277,9 @@ local function submit_prompt()
     return
   end
 
-  current_chat_id = generate_chat_id()
-  save_chat_history(current_chat_id, content)
+  current_chat_filename = get_timestamp_filename()
+  save_chat_history(current_chat_filename, content)
+  add_prompt_summary(current_chat_filename, content)
 
   add_response_delineator(prompt_bufnr, config.model)
 
@@ -433,7 +443,7 @@ end, { desc = "Submit prompt to OpenRouter API for AI completion" })
 
 vim.api.nvim_create_user_command("PromptNew", function()
   M.clear_prompt()
-  current_chat_id = nil
+  current_chat_filename = nil
   -- Open the prompt window if not already open
   if not prompt_winid or not vim.api.nvim_win_is_valid(prompt_winid) then
     M.open_prompt()
