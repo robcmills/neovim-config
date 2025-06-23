@@ -142,7 +142,7 @@ local function sync_chat_history()
   save_chat_history(current_chat_filename, content)
 end
 
-local function center_window()
+local function get_window_config()
   local width = config.width
   local height = config.height
 
@@ -495,8 +495,8 @@ function M.open_prompt()
   -- Get or create the prompt buffer (this will reuse existing content)
   local bufnr = get_or_create_prompt_buffer()
 
-  local win_opts = center_window()
-  prompt_winid = vim.api.nvim_open_win(bufnr, true, win_opts)
+  local win_config = get_window_config()
+  prompt_winid = vim.api.nvim_open_win(bufnr, true, win_config)
 
   vim.wo[prompt_winid].wrap = true
   vim.wo[prompt_winid].linebreak = true
