@@ -486,6 +486,7 @@ end, { desc = 'Reset Buffers plugin' })
 -- require('splash')
 
 -- prompt
+package.loaded['prompt'] = nil
 require('prompt').setup()
 vim.keymap.set('n', '<leader>i', ':Prompt<cr>', { desc = 'Prompt' })
 

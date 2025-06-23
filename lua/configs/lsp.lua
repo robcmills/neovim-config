@@ -172,17 +172,17 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.bo.expandtab = true -- Use spaces instead of tabs
 
     -- Optionally set up custom format command using LSP
-    vim.keymap.set("n", "<leader>f", function()
-      vim.lsp.buf.format({
-        filter = function(client)
-          return client.name == "lua_ls" -- your LSP client name for Lua
-        end,
-        formatting_options = {
-          insertSpaces = true,
-          tabSize = 2,
-        },
-      })
-    end, { buffer = true })
+    -- vim.keymap.set("n", "<leader>f", function()
+    --   vim.lsp.buf.format({
+    --     filter = function(client)
+    --       return client.name == "lua_ls" -- your LSP client name for Lua
+    --     end,
+    --     formatting_options = {
+    --       insertSpaces = true,
+    --       tabSize = 2,
+    --     },
+    --   })
+    -- end, { buffer = true })
   end,
 })
 

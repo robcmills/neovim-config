@@ -54,6 +54,7 @@ Autosave Feature:
 
 ### Todo
 
+- Fix issue with local history_dir
 - Add support for chats longer than one question and answer
 - Enable side panel for prompt window
 - Resize window when buffer lines length exceeds window height
@@ -325,7 +326,6 @@ local function make_openrouter_request(opts)
           end
         end
       end
-
     end)
   end
 
@@ -458,7 +458,7 @@ Respond with only the title and nothing else.
     messages = messages,
     model = config.model,
     stream = false,
-    on_success =  on_success
+    on_success = on_success
   })
 end
 
