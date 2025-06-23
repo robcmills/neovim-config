@@ -361,20 +361,20 @@ local function submit_prompt()
     return
   end
 
-  local content = get_buffer_content(prompt_bufnr)
-  if content == "" then
+  local buffer_content = get_buffer_content(prompt_bufnr)
+  if buffer_content == "" then
     vim.notify("Prompt buffer is empty.", vim.log.levels.WARN)
     return
   end
 
   current_chat_filename = get_timestamp_filename()
-  save_chat_history(current_chat_filename, content)
-  add_prompt_summary(current_chat_filename, content)
+  save_chat_history(current_chat_filename, buffer_content)
+  add_prompt_summary(current_chat_filename, buffer_content)
 
   add_response_delineator(prompt_bufnr, config.model)
 
   local messages = {
-    { role = "user", content = content }
+    { role = "user", content = buffer_content }
   }
 
   make_openrouter_request({
