@@ -54,12 +54,11 @@ Autosave Feature:
 
 ### Todo
 
-- Only enter insert mode if prompt is empty
 - Scroll delineator to top when submitting prompt
+- Model picker
 - Add support for chats longer than one question and answer
 - Resize window when buffer lines length exceeds window height
 - Resize window when buffer longest line width exceeds window width
-- Model picker
 - Move state into object
 - Disable buffer editing when streaming response
 - Enable cancellation of streaming request
@@ -521,7 +520,9 @@ function M.open_prompt()
   setup_keymaps(bufnr)
   setup_autocommands(bufnr)
 
-  vim.cmd("startinsert")
+  if vim.api.nvim_buf_line_count(bufnr) <= 1 then
+    vim.cmd("startinsert")
+  end
 end
 
 function M.close_prompt()
