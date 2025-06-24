@@ -459,7 +459,7 @@ Respond with only the title and nothing else.
   })
 end
 
-local function submit_prompt()
+function M.submit_prompt()
   if not prompt_bufnr or not vim.api.nvim_buf_is_valid(prompt_bufnr) then
     vim.notify("No prompt buffer found. Use :Prompt first.", vim.log.levels.WARN)
     return
@@ -615,7 +615,7 @@ vim.api.nvim_create_user_command("Prompt", function()
 end, { desc = "Open a floating markdown prompt window" })
 
 vim.api.nvim_create_user_command("PromptSubmit", function()
-  submit_prompt()
+  M.submit_prompt()
 end, { desc = "Submit prompt to OpenRouter API for AI completion" })
 
 vim.api.nvim_create_user_command("PromptNew", function()
