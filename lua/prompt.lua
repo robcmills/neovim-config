@@ -54,18 +54,16 @@ Autosave Feature:
 
 ### Todo
 
-- PromptHistory command
+- Only enter insert mode if prompt is empty
+- Scroll delineator to top when submitting prompt
 - Add support for chats longer than one question and answer
-- Enable side panel for prompt window
 - Resize window when buffer lines length exceeds window height
 - Resize window when buffer longest line width exceeds window width
-- Scroll delineator to top when submitting prompt
-- Flatten stdout handler
+- Model picker
 - Move state into object
 - Disable buffer editing when streaming response
 - Enable cancellation of streaming request
-- Model picker
-- UI for configuration and key bindings
+- UI
 - Tests
 - Quitting nvim while prompt window is open throws many errors
 
@@ -539,6 +537,70 @@ function M.clear_prompt()
   end
 end
 
+function M.load_prompt_history()
+  ensure_history_dir()
+  local history_dir = get_history_dir()
+
+  -- Get list of markdown files in history directory
+  local files = vim.fn.globpath(history_dir, "*.md", false, true)
+
+  if #files == 0 then
+    vim.notify("No prompt history found in " .. history_dir, vim.log.levels.INFO)
+    return
+  end
+
+  -- Extract just the filenames for display
+  local file_choices = {}
+  for _, filepath in ipairs(files) do
+    local filename = vim.fn.fnamemodify(filepath, ":t")
+    table.insert(file_choices, {
+      filename = filename,
+      filepath = filepath,
+      display = filename
+    })
+  end
+
+  -- Sort by filename (which includes timestamp) in descending order (newest first)
+  table.sort(file_choices, function(a, b)
+    return a.filename > b.filename
+  end)
+
+  vim.ui.select(file_choices, {
+    prompt = "Select a prompt from history:",
+    format_item = function(item)
+      return item.display
+    end,
+  }, function(choice)
+    if not choice then
+      return
+    end
+
+    -- Read the selected file
+    local file = io.open(choice.filepath, "r")
+    if not file then
+      vim.notify("Failed to read file: " .. choice.filepath, vim.log.levels.ERROR)
+      return
+    end
+
+    local content = file:read("*all")
+    file:close()
+
+    -- Load content into prompt buffer
+    if prompt_bufnr and vim.api.nvim_buf_is_valid(prompt_bufnr) then
+      vim.api.nvim_buf_set_lines(prompt_bufnr, 0, -1, false, vim.split(content, "\n"))
+      current_chat_filename = choice.filename
+      vim.notify("Loaded prompt from: " .. choice.filename, vim.log.levels.INFO)
+
+      -- Open the prompt window if not already open
+      if not prompt_winid or not vim.api.nvim_win_is_valid(prompt_winid) then
+        M.open_prompt()
+      end
+    else
+      vim.notify("Prompt buffer not available", vim.log.levels.ERROR)
+    end
+  end)
+end
+
 -- Setup function
 function M.setup(opts)
   if opts then
@@ -563,5 +625,9 @@ vim.api.nvim_create_user_command("PromptNew", function()
     M.open_prompt()
   end
 end, { desc = "Create a new prompt" })
+
+vim.api.nvim_create_user_command("PromptHistory", function()
+  M.load_prompt_history()
+end, { desc = "Browse and load prompt history" })
 
 return M
