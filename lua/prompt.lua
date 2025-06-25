@@ -659,12 +659,38 @@ function M.select_model()
     return
   end
 
+  -- Temporarily disable the WinLeave autocommand to prevent the prompt window from closing
+  local autocommand_group = vim.api.nvim_get_autocmds({ group = "PromptWindow" })
+  local winleave_autocmd = nil
+  for _, autocmd in ipairs(autocommand_group) do
+    if autocmd.event == "WinLeave" then
+      winleave_autocmd = autocmd
+      break
+    end
+  end
+
+  -- Disable the WinLeave autocommand if it exists
+  if winleave_autocmd then
+    vim.api.nvim_del_autocmd(winleave_autocmd.id)
+  end
+
   vim.ui.select(model_choices, {
     prompt = "Select a model:",
     format_item = function(item)
       return item.display
     end,
   }, function(choice)
+    -- Re-enable the WinLeave autocommand after the selection is made
+    if winleave_autocmd and prompt_bufnr and vim.api.nvim_buf_is_valid(prompt_bufnr) then
+      vim.api.nvim_create_autocmd("WinLeave", {
+        group = "PromptWindow",
+        buffer = prompt_bufnr,
+        callback = function()
+          M.close_prompt()
+        end,
+      })
+    end
+
     if not choice then
       return
     end
@@ -703,7 +729,7 @@ vim.api.nvim_create_user_command("PromptHistory", function()
   M.load_prompt_history()
 end, { desc = "Browse and load prompt history" })
 
-vim.api.nvim_create_user_command("PromptModel", function()
+vim.api.nvim_create_user_command("PromptSelectModel", function()
   M.select_model()
 end, { desc = "Select LLM model from available models" })
 
