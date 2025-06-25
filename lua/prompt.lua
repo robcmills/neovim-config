@@ -54,7 +54,6 @@ Autosave Feature:
 
 ### Todo
 
-- Scroll delineator to top when submitting prompt
 - Model picker
 - Add support for chats longer than one question and answer
 - Resize window when buffer lines length exceeds window height
@@ -189,6 +188,7 @@ local function create_markdown_buffer()
   vim.bo[bufnr].swapfile = false
   vim.bo[bufnr].bufhidden = "hide"
   vim.bo[bufnr].filetype = "markdown"
+  vim.bo[bufnr].buflisted = false
   vim.api.nvim_buf_set_name(bufnr, "prompt://markdown")
   return bufnr
 end
