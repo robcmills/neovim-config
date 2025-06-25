@@ -612,6 +612,15 @@ function M.load_prompt_history()
   end)
 end
 
+local function update_window_footer()
+  if not prompt_winid or not vim.api.nvim_win_is_valid(prompt_winid) then
+    return
+  end
+  local win_config = vim.api.nvim_win_get_config(prompt_winid)
+  win_config.footer = string.format(" Model: %s ", config.model)
+  vim.api.nvim_win_set_config(prompt_winid, win_config)
+end
+
 function M.select_model()
   local models_path = get_models_path()
 
@@ -697,6 +706,7 @@ function M.select_model()
 
     config.model = choice.id
     vim.notify("Selected model: " .. choice.name, vim.log.levels.INFO)
+    update_window_footer()
   end)
 end
 
