@@ -71,14 +71,16 @@ local M = {}
 
 local OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
 local OPENROUTER_API_V1_CHAT_COMPLETIONS_URL = 'https://openrouter.ai/api/v1/chat/completions'
+local OPENROUTER_API_V1_MODELS_URL = 'https://openrouter.ai/api/v1/models'
 
 local config = {
   width = 80,
-  height = 20,
+  height = 50,
   border = "rounded",
   title = " prompt.md ",
   title_pos = "right",
   model = "anthropic/claude-sonnet-4",
+  models_path = "~/.local/share/nvim/prompt_models.json",
   response_delineator = "● %s ────────────",
   history_dir = "~/.local/share/nvim/prompt_history/",
   max_filename_length = 50,
@@ -98,6 +100,14 @@ local function get_history_dir()
     dir = vim.fn.expand(dir)
   end
   return dir
+end
+
+local function get_models_path()
+  local path = config.models_path
+  if string.sub(path, 1, 1) == "~" then
+    path = vim.fn.expand(path)
+  end
+  return path
 end
 
 local function ensure_history_dir()
@@ -602,6 +612,68 @@ function M.load_prompt_history()
   end)
 end
 
+function M.select_model()
+  local models_path = get_models_path()
+
+  -- Check if models file exists
+  local file = io.open(models_path, "r")
+  if not file then
+    vim.notify("Models file not found: " .. models_path, vim.log.levels.ERROR)
+    return
+  end
+
+  local content = file:read("*all")
+  file:close()
+
+  -- Parse JSON
+  local success, models_data = pcall(vim.json.decode, content)
+  if not success then
+    vim.notify("Failed to parse models JSON file", vim.log.levels.ERROR)
+    return
+  end
+
+  if not models_data.data or type(models_data.data) ~= "table" then
+    vim.notify("Invalid models file format: missing 'data' array", vim.log.levels.ERROR)
+    return
+  end
+
+  -- Sort models by created timestamp descending (most recent first)
+  table.sort(models_data.data, function(a, b)
+    return (a.created or 0) > (b.created or 0)
+  end)
+
+  -- Create choices for UI select
+  local model_choices = {}
+  for _, model in ipairs(models_data.data) do
+    if model.id and model.name then
+      table.insert(model_choices, {
+        id = model.id,
+        name = model.name,
+        display = model.name
+      })
+    end
+  end
+
+  if #model_choices == 0 then
+    vim.notify("No valid models found in models file", vim.log.levels.WARN)
+    return
+  end
+
+  vim.ui.select(model_choices, {
+    prompt = "Select a model:",
+    format_item = function(item)
+      return item.display
+    end,
+  }, function(choice)
+    if not choice then
+      return
+    end
+
+    config.model = choice.id
+    vim.notify("Selected model: " .. choice.name, vim.log.levels.INFO)
+  end)
+end
+
 -- Setup function
 function M.setup(opts)
   if opts then
@@ -630,5 +702,9 @@ end, { desc = "Create a new prompt" })
 vim.api.nvim_create_user_command("PromptHistory", function()
   M.load_prompt_history()
 end, { desc = "Browse and load prompt history" })
+
+vim.api.nvim_create_user_command("PromptModel", function()
+  M.select_model()
+end, { desc = "Select LLM model from available models" })
 
 return M
