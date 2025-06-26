@@ -496,3 +496,19 @@ vim.api.nvim_create_user_command('Messages', function()
     vim.split(vim.fn.execute('messages'), '\n', { plain = true })
   )
 end, { desc = 'Dump messages into a new buffer' })
+
+vim.api.nvim_create_user_command('Hover', function()
+  local params = vim.lsp.util.make_position_params()
+  vim.lsp.buf_request(0, 'textDocument/hover', params, function(err, result, ctx, config)
+    if result and result.contents then
+      print(vim.inspect(result))
+      local lines = vim.lsp.util.convert_input_to_markdown_lines(result.contents)
+      vim.cmd('vsplit')
+      local buf = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+      vim.api.nvim_win_set_buf(0, buf)
+      vim.bo.filetype = 'markdown'
+    end
+  end)
+end, { desc = 'Dump hover info into a new buffer' })
+

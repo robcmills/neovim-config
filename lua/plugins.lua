@@ -154,6 +154,8 @@ return require('packer').startup {
 
     use 'stevearc/dressing.nvim'
 
+    use 'mustache/vim-mustache-handlebars'
+
   end,
   config = {
     display = {

@@ -54,7 +54,7 @@ Autosave Feature:
 
 ### Todo
 
-- Model picker
+- Model picker configurable format
 - Add support for chats longer than one question and answer
 - Resize window when buffer lines length exceeds window height
 - Resize window when buffer longest line width exceeds window width
@@ -81,7 +81,7 @@ local config = {
   title_pos = "right",
   model = "anthropic/claude-sonnet-4",
   models_path = "~/.local/share/nvim/prompt_models.json",
-  response_delineator = "● %s ────────────",
+  response_delineator = "---\n● %s ───",
   history_dir = "~/.local/share/nvim/prompt_history/",
   max_filename_length = 50,
   window_position = "right", -- "center", "left", or "right"
