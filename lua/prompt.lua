@@ -369,24 +369,32 @@ local function append_to_buffer(bufnr, text)
       return
     end
 
-    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-
-    if #lines == 0 then lines = { "" } end
-
-    local current_line = lines[#lines]
+    local line_count = vim.api.nvim_buf_line_count(bufnr)
     local text_parts = vim.split(text, "\n")
+
+    if line_count == 0 then
+      -- Empty buffer, just set the text parts
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, text_parts)
+      return
+    end
+
+    -- Get only the last line
+    local last_line_idx = line_count - 1
+    local last_line = vim.api.nvim_buf_get_lines(bufnr, last_line_idx, last_line_idx + 1, false)[1] or ""
 
     -- Handle the first part (append to current line)
     if #text_parts > 0 then
-      lines[#lines] = current_line .. text_parts[1]
+      vim.api.nvim_buf_set_lines(bufnr, last_line_idx, last_line_idx + 1, false, { last_line .. text_parts[1] })
     end
 
     -- Handle remaining parts (each becomes a new line)
-    for i = 2, #text_parts do
-      table.insert(lines, text_parts[i])
+    if #text_parts > 1 then
+      local new_lines = {}
+      for i = 2, #text_parts do
+        table.insert(new_lines, text_parts[i])
+      end
+      vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, new_lines)
     end
-
-    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
   end)
 end
 
