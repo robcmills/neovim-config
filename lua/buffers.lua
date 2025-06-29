@@ -90,6 +90,16 @@ Colors values are highlight definition maps (see nvim_set_hl):
 
 local M = {}
 
+local devicons_ok, devicons = pcall(require, "nvim-web-devicons")
+
+local function get_devicon(name)
+  if not devicons_ok then
+    return "", nil
+  end
+  local icon, hl = devicons.get_icon(name, nil, { default = true })
+  return icon or "", hl
+end
+
 ---@class BuffersState
 ---@field win number|nil Window handle for the buffers window
 ---@field buf number|nil Buffer handle for the buffers buffer
@@ -251,8 +261,10 @@ local function calculate_auto_width()
   for _, bufnr in ipairs(buffers) do
     local name = get_buffer_name(bufnr, buffers)
     local letter = letter_map[bufnr]
-    -- Format: "letter indicator name" + 1 margin column
-    local line_width = string.len(letter) + 3 + string.len(name) + 1
+    local icon, _ = get_devicon(name)
+    -- Format: "letter icon name" + 1 margin column
+    local icon_len = icon ~= "" and (string.len(icon) + 1) or 0
+    local line_width = string.len(letter) + 1 + icon_len + string.len(name) + 1
     max_width = math.max(max_width, line_width)
   end
 
@@ -321,7 +333,12 @@ local function render()
   for _, bufnr in ipairs(buffers) do
     local name = get_buffer_name(bufnr, buffers)
     local letter = letter_map[bufnr]
-    table.insert(lines, string.format("%s %s", letter, name))
+    local icon, _ = get_devicon(name)
+    if icon ~= "" then
+      table.insert(lines, string.format("%s %s %s", letter, icon, name))
+    else
+      table.insert(lines, string.format("%s %s", letter, name))
+    end
   end
 
   vim.bo[state.buf].modifiable = true
@@ -359,7 +376,24 @@ local function render()
     -- Calculate the start and end positions for the buffer name
     local name = get_buffer_name(bufnr, buffers)
     local letter = letter_map[bufnr]
-    local name_start = string.len(letter) + 1
+    local icon, icon_hl = get_devicon(name)
+
+    local name_start
+    if icon ~= "" then
+      local icon_start = string.len(letter) + 1
+      local icon_end = icon_start + string.len(icon)
+      if icon_hl then
+        vim.api.nvim_buf_set_extmark(state.buf, vim.api.nvim_create_namespace("buffers_icons"),
+          line_idx - 1, icon_start, {
+            end_col = icon_end,
+            hl_group = icon_hl
+          })
+      end
+      name_start = icon_end + 1
+    else
+      name_start = string.len(letter) + 1
+    end
+
     local name_end = name_start + string.len(name)
 
     -- Apply highlight to the buffer name only

@@ -54,6 +54,9 @@ Autosave Feature:
 
 ### Todo
 
+- Add split window support (instead of floating window)
+- Enable multiple prompts simultaneously (just use files in history_dir,
+  instead of a single shared buffer)
 - Model picker configurable format
 - Add support for chats longer than one question and answer
 - Resize window when buffer lines length exceeds window height
