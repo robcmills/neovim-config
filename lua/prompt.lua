@@ -54,11 +54,16 @@ Autosave Feature:
 
 ### Todo
 
+- Add more providers support
+- Add token counts and costs stats
+- Add sqlite db for storing more data
 - Add split window support (instead of floating window)
 - Enable multiple prompts simultaneously (just use files in history_dir,
   instead of a single shared buffer)
 - Model picker configurable format
 - Add support for chats longer than one question and answer
+- Add support for thinking models
+- Add support for attaching files
 - Resize window when buffer lines length exceeds window height
 - Resize window when buffer longest line width exceeds window width
 - Move state into object
