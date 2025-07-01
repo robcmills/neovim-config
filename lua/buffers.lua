@@ -44,8 +44,10 @@ The code is written in lua.
 
 
 TODO:
+  - bug: double letter shortcuts don't work because "ab" just jumps to "a" on first keypress
+  - bug: shortcut lettering to a buffer should open in _last focused window_
   - add debug log to file
-  - add option to show buffers list in a floating window
+  - add option to show buffers list in a floating window (even if sidebar is open)
   - fix repeated calls to :BuffersMove* not working
   - handle :file renames
   - handle filesystem changes (e.g. rm, mv, cp)

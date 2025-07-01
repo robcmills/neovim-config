@@ -22,16 +22,16 @@ Usage:
 Configuration:
 You can customize the plugin by calling require('prompt').setup() with options:
 {
-    width = 80,        -- Window width
-    height = 20,       -- Window height
-    border = "rounded", -- Border style
-    title = " Prompt ", -- Window title
-    title_pos = "center", -- Title position
-    model = "anthropic/claude-3.5-sonnet", -- OpenRouter model to use
-    response_delineator = "● %s ────────────", -- Format for response delineator
-    history_dir = "prompt_history/", -- Directory to save chat history
-    max_filename_length = 50, -- Maximum length for generated filename summaries
-    window_position = "center", -- Window position: "center", "left", or "right"
+  width = 80,        -- Window width
+  height = 20,       -- Window height
+  border = "rounded", -- Border style
+  title = " Prompt ", -- Window title
+  title_pos = "center", -- Title position
+  model = "anthropic/claude-3.5-sonnet", -- OpenRouter model to use
+  delineator = "● %s ────────────", -- Format for response delineator
+  history_dir = "prompt_history/", -- Directory to save chat history
+  max_filename_length = 50, -- Maximum length for generated filename summaries
+  window_position = "center", -- Window position: "center", "left", or "right"
 }
 
 Example:
@@ -61,6 +61,7 @@ Autosave Feature:
 - Enable multiple prompts simultaneously (just use files in history_dir,
   instead of a single shared buffer)
 - Model picker configurable format
+- Add leaderboard sorting to model picker
 - Add support for chats longer than one question and answer
 - Add support for thinking models
 - Add support for attaching files
@@ -72,6 +73,8 @@ Autosave Feature:
 - UI
 - Tests
 - Quitting nvim while prompt window is open throws many errors
+- Add "inline" prompts (meta+k) for code edits
+- Add agent mode?
 
 --]]
 
@@ -89,9 +92,9 @@ local config = {
   title_pos = "right",
   model = "anthropic/claude-sonnet-4",
   models_path = "~/.local/share/nvim/prompt_models.json",
-  response_delineator = "---\n● %s ───",
+  chat_delineator = "---\n● %s ───",
   history_dir = "~/.local/share/nvim/prompt_history/",
-  max_filename_length = 50,
+  max_filename_length = 75,
   window_position = "right", -- "center", "left", or "right"
 }
 
@@ -352,14 +355,14 @@ local function make_openrouter_request(opts)
   }, on_exit)
 end
 
-local function add_response_delineator(bufnr, model)
+local function add_chat_delineator(bufnr, model)
   if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
-    print('add_response_delineator: buffer not valid')
+    print('add_chat_delineator: buffer not valid')
     return
   end
 
   local content = get_buffer_content(bufnr)
-  local delineator = string.format(config.response_delineator, model)
+  local delineator = string.format(config.chat_delineator, model)
 
   local new_content = content .. "\n\n" .. delineator .. "\n\n"
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(new_content, "\n"))
@@ -487,7 +490,7 @@ end
 
 function M.submit_prompt()
   if not prompt_bufnr or not vim.api.nvim_buf_is_valid(prompt_bufnr) then
-    vim.notify("No prompt buffer found. Use :Prompt first.", vim.log.levels.WARN)
+    vim.notify("No prompt buffer found. Use :PromptOpen or :PromptNew first.", vim.log.levels.WARN)
     return
   end
 
@@ -503,7 +506,7 @@ function M.submit_prompt()
   save_chat_history(current_chat_filename, buffer_content)
   add_prompt_summary(current_chat_filename, buffer_content)
 
-  add_response_delineator(prompt_bufnr, config.model)
+  add_chat_delineator(prompt_bufnr, config.model)
 
   local messages = {
     { role = "user", content = buffer_content }
@@ -726,6 +729,10 @@ function M.select_model()
   end)
 end
 
+function M.split_prompt()
+  -- todo
+end
+
 -- Setup function
 function M.setup(opts)
   if opts then
@@ -734,7 +741,7 @@ function M.setup(opts)
 end
 
 -- Create user commands
-vim.api.nvim_create_user_command("Prompt", function()
+vim.api.nvim_create_user_command("PromptOpen", function()
   M.open_prompt()
 end, { desc = "Open a floating markdown prompt window" })
 
@@ -745,7 +752,6 @@ end, { desc = "Submit prompt to OpenRouter API for AI completion" })
 vim.api.nvim_create_user_command("PromptNew", function()
   M.clear_prompt()
   current_chat_filename = nil
-  -- Open the prompt window if not already open
   if not prompt_winid or not vim.api.nvim_win_is_valid(prompt_winid) then
     M.open_prompt()
   end
@@ -758,5 +764,9 @@ end, { desc = "Browse and load prompt history" })
 vim.api.nvim_create_user_command("PromptSelectModel", function()
   M.select_model()
 end, { desc = "Select LLM model from available models" })
+
+vim.api.nvim_create_user_command("PromptSplit", function()
+  M.split_prompt()
+end, { desc = "Split the current window vertically and open a new prompt" })
 
 return M

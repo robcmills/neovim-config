@@ -488,7 +488,7 @@ end, { desc = 'Reset Buffers plugin' })
 -- prompt
 package.loaded['prompt'] = nil
 require('prompt').setup()
-vim.keymap.set('n', '<leader>i', ':Prompt<cr>', { desc = 'Prompt' })
+vim.keymap.set('n', '<leader>i', ':PromptOpen<cr>', { desc = 'Open Prompt window' })
 
 vim.api.nvim_create_user_command('Messages', function()
   vim.cmd('enew')
