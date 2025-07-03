@@ -92,8 +92,9 @@ local config = {
   title_pos = "right",
   model = "anthropic/claude-sonnet-4",
   models_path = "~/.local/share/nvim/prompt_models.json",
-  chat_delineator = "---\n● %s ───",
+  chat_delineator = "● %s:",
   history_dir = "~/.local/share/nvim/prompt_history/",
+  history_date_format = "%Y-%m-%dT%H:%M:%S",
   max_filename_length = 75,
   window_position = "right", -- "center", "left", or "right"
 }
@@ -129,7 +130,7 @@ local function ensure_history_dir()
 end
 
 local function get_timestamp_filename()
-  local timestamp = os.date("%Y-%m-%dT%H:%M:%S")
+  local timestamp = os.date(config.history_date_format)
   return timestamp .. ".md"
 end
 
@@ -355,17 +356,15 @@ local function make_openrouter_request(opts)
   }, on_exit)
 end
 
-local function add_chat_delineator(bufnr, model)
+local function add_chat_delineator(bufnr, role)
   if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
     print('add_chat_delineator: buffer not valid')
     return
   end
 
-  local content = get_buffer_content(bufnr)
-  local delineator = string.format(config.chat_delineator, model)
-
-  local new_content = content .. "\n\n" .. delineator .. "\n\n"
-  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(new_content, "\n"))
+  local delineator = string.format(config.chat_delineator, role)
+  local new_content = "\n" .. delineator .. "\n\n"
+  vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, vim.split(new_content, "\n"))
 end
 
 local function append_to_buffer(bufnr, text)
@@ -437,7 +436,7 @@ local function sanitize_filename(text)
   return sanitized
 end
 
-local function add_prompt_summary(filename, prompt)
+local function get_prompt_summary(filename, prompt, callback)
   local summary_prompt = string.format([[
 Summarize the following Prompt in a single, very short title.
 Format it for a filename, in kebab-case, no spaces, and no punctuation.
@@ -470,14 +469,8 @@ Respond with only the title and nothing else.
     local base_name = string.gsub(filename, "%.md$", "")
     local new_filename = base_name .. "-" .. sanitized_summary .. ".md"
 
-    -- Rename the file
-    local old_path = get_history_dir() .. filename
-    local new_path = get_history_dir() .. new_filename
+    if callback then callback(new_filename) end
 
-    if rename_file(old_path, new_path) then
-      current_chat_filename = new_filename
-      vim.notify("Renamed prompt file to: " .. new_filename, vim.log.levels.INFO)
-    end
   end
 
   make_openrouter_request({
@@ -503,8 +496,21 @@ function M.submit_prompt()
   if current_chat_filename == nil then
     current_chat_filename = get_timestamp_filename()
   end
+
   save_chat_history(current_chat_filename, buffer_content)
-  add_prompt_summary(current_chat_filename, buffer_content)
+
+  local callback = function(summary_filename)
+    -- Rename the file
+    local old_path = get_history_dir() .. current_chat_filename
+    local new_path = get_history_dir() .. summary_filename
+
+    if rename_file(old_path, new_path) then
+      current_chat_filename = summary_filename
+      vim.notify("Renamed prompt file to: " .. summary_filename, vim.log.levels.INFO)
+    end
+  end
+
+  get_prompt_summary(current_chat_filename, buffer_content, callback)
 
   add_chat_delineator(prompt_bufnr, config.model)
 
@@ -525,6 +531,112 @@ function M.submit_prompt()
     end,
     on_delta_content = function(content)
       append_to_buffer(prompt_bufnr, content)
+    end
+  })
+end
+
+local function parse_messages_from_chat_buffer(buffer_content)
+  local messages = {}
+  local delineator_pattern = "^" .. string.gsub(config.chat_delineator, "%%s", "(.+)") .. "$"
+
+  -- Split content by lines for processing
+  local lines = vim.split(buffer_content, "\n")
+  local current_message = {
+    role = "user", -- default role for first message
+    content = ""
+  }
+  local content_lines = {}
+
+  for _, line in ipairs(lines) do
+    -- Check if this line matches the delineator pattern
+    local role_match = string.match(line, delineator_pattern)
+    if role_match then
+      -- Save current message if it has content
+      if #content_lines > 0 then
+        current_message.content = vim.trim(table.concat(content_lines, "\n"))
+        if current_message.content ~= "" then
+          table.insert(messages, current_message)
+        end
+      end
+
+      -- Start new message
+      local role = vim.trim(role_match)
+      -- Validate role
+      if not vim.tbl_contains({"user", "assistant", "system", "developer", "tool"}, role) then
+        role = "assistant"
+      end
+
+      current_message = { role = role, content = "" }
+      content_lines = {}
+    else
+      -- Add line to current message content
+      table.insert(content_lines, line)
+    end
+  end
+
+  -- Add final message if it has content
+  if #content_lines > 0 then
+    current_message.content = vim.trim(table.concat(content_lines, "\n"))
+    if current_message.content ~= "" then
+      table.insert(messages, current_message)
+    end
+  end
+
+  return messages
+end
+
+function M.submit_chat()
+  local current_bufnr = vim.api.nvim_get_current_buf()
+  local buffer_content = get_buffer_content(current_bufnr)
+
+  if buffer_content == "" then
+    vim.notify("Buffer is empty.", vim.log.levels.WARN)
+    return
+  end
+
+  local messages = parse_messages_from_chat_buffer(buffer_content)
+
+  if #messages == 0 then
+    vim.notify("No valid messages found in buffer.", vim.log.levels.WARN)
+    return
+  end
+
+  local current_filename = vim.fn.expand("%:t")
+  local datetime_filename = get_timestamp_filename()
+  if string.len(current_filename) == string.len(datetime_filename) then
+    -- Get first user message for summary
+    local first_user_message = nil
+    for _, message in ipairs(messages) do
+      if message.role == "user" then
+        first_user_message = message.content
+        break
+      end
+    end
+
+    if first_user_message then
+      local callback = function(summary_filename)
+        vim.api.nvim_buf_set_name(
+          current_bufnr,
+          get_history_dir() .. summary_filename
+        )
+        vim.cmd("write")
+      end
+      get_prompt_summary(current_filename, first_user_message, callback)
+    end
+  end
+
+  add_chat_delineator(current_bufnr, config.model)
+
+  make_openrouter_request({
+    messages = messages,
+    model = config.model,
+    stream = true,
+    on_success = function()
+      add_chat_delineator(current_bufnr, 'user')
+      vim.cmd("write")
+    end,
+    on_delta_content = function(content)
+      append_to_buffer(current_bufnr, content)
     end
   })
 end
@@ -730,7 +842,27 @@ function M.select_model()
 end
 
 function M.split_prompt()
-  -- todo
+  -- Split the current window vertically
+  vim.cmd("vsplit")
+  vim.cmd("wincmd L")
+
+  -- Create a new prompt file in the history_dir
+  ensure_history_dir()
+  local new_filename = get_timestamp_filename()
+  local new_filepath = get_history_dir() .. new_filename
+
+  -- Create the new buffer with proper settings
+  local bufnr = vim.api.nvim_create_buf(true, false) -- listed, not scratch
+  vim.bo[bufnr].modifiable = true
+  vim.bo[bufnr].buftype = '' -- normal buffer, not nofile
+  vim.bo[bufnr].swapfile = false
+  vim.bo[bufnr].bufhidden = "hide"
+  vim.bo[bufnr].filetype = "markdown"
+  vim.bo[bufnr].buflisted = true
+  vim.api.nvim_buf_set_name(bufnr, new_filepath)
+  vim.api.nvim_win_set_buf(0, bufnr)
+
+  vim.cmd("startinsert")
 end
 
 -- Setup function
@@ -768,5 +900,9 @@ end, { desc = "Select LLM model from available models" })
 vim.api.nvim_create_user_command("PromptSplit", function()
   M.split_prompt()
 end, { desc = "Split the current window vertically and open a new prompt" })
+
+vim.api.nvim_create_user_command("PromptSubmitChat", function()
+  M.submit_chat()
+end, { desc = "Submit chat buffer with parsed messages to OpenRouter API" })
 
 return M

@@ -20,8 +20,8 @@ telescope.setup({
     layout_config = {
       horizontal = {
         prompt_position = 'top',
-        preview_width = 0.5,
-        results_width = 0.5,
+        preview_width = 0.4,
+        results_width = 0.6,
       },
       width = 0.99,
       height = 0.99,
@@ -56,8 +56,8 @@ telescope.setup({
       layout_strategy = 'vertical',
       path_display = function(opts, path)
         local tail = require("telescope.utils").path_tail(path)
-      path = string.gsub(path, "src/js/", "")
-      path = string.gsub(path, tail .. "$", "")
+        path = string.gsub(path, "src/js/", "")
+        path = string.gsub(path, tail .. "$", "")
         return string.format("%s  |  %s", tail, path)
       end,
       show_line = false,

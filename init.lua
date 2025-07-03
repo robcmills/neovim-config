@@ -472,8 +472,9 @@ end, {})
 -- :set path=.,** -- to add current directory and all subdirectories
 
 -- execute lua
-vim.keymap.set('n', '<leader>u', ':.lua<cr>', { desc = 'Execute current line of lua' })
 vim.keymap.set('v', '<leader>u', ':lua<cr>', { desc = 'Execute selected lua' })
+-- vim.keymap.set('n', '<leader>u', ':.lua<cr>', { desc = 'Execute current line of lua' })
+vim.keymap.set('n', '<leader>u', ':luafile %<cr>', { desc = 'Execute current lua file' })
 
 package.loaded['buffers'] = nil
 require('buffers').setup()
