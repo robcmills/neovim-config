@@ -1,56 +1,16 @@
 --[[
+
+                                                              ██
+██████ █████ ██████ ██████████ ██████ ██████   ██████████ ██████
+██  ██ ██    ██  ██ ██  ██  ██ ██  ██   ██     ██  ██  ██ ██  ██
+██████ ██    ██████ ██  ██  ██ ██████   ██  ██ ██  ██  ██ ██████
+██                             ██
+
 Markdown Prompt Plugin for Neovim
 
-A simple plugin that opens a floating window with a markdown prompt buffer.
-Submits prompt to OpenRouter API for LLM completion.
+Enables prompting from a markdown buffer.
+Submits prompts to OpenRouter API for LLM completion.
 Streams response back to buffer.
-
-Features:
-- Opens a centered floating window with markdown syntax highlighting
-- Press q to close
-- Automatically enters insert mode for immediate typing
-- Configurable window size and appearance
-- Submit prompt to OpenRouter API for AI completion
-- Autosaves prompts and responses to history directory
-- Create a new prompt with :PromptNew command
-
-Usage:
-- Command :Prompt - Open a floating markdown prompt window
-- Command :PromptSubmit - Submit prompt to OpenRouter API for AI completion
-- Command :PromptNew - Create a new prompt (clears current buffer)
-
-Configuration:
-You can customize the plugin by calling require('prompt').setup() with options:
-{
-  width = 80,        -- Window width
-  height = 20,       -- Window height
-  border = "rounded", -- Border style
-  title = " Prompt ", -- Window title
-  title_pos = "center", -- Title position
-  model = "anthropic/claude-3.5-sonnet", -- OpenRouter model to use
-  delineator = "● %s ────────────", -- Format for response delineator
-  history_dir = "prompt_history/", -- Directory to save chat history
-  max_filename_length = 50, -- Maximum length for generated filename summaries
-  window_position = "center", -- Window position: "center", "left", or "right"
-}
-
-Example:
-require('prompt').setup({
-    width = 100,
-    height = 25,
-    border = "double",
-    model = "openai/gpt-4o",
-    history_dir = "~/.local/share/nvim/prompt_history/",
-    max_filename_length = 60,
-    window_position = "right" -- Opens prompt window on the right side, full height
-})
-
-Autosave Feature:
-- Automatically saves prompts and responses to files in the history directory
-- Filenames use ISO datetime format (e.g., "2025-06-21T04:27:18.md")
-- Saves prompt content before submitting to API
-- Syncs final content (including response) when streaming completes
-- Use :PromptNew to start a fresh conversation
 
 ### Todo
 
@@ -282,10 +242,7 @@ local function make_openrouter_request(opts)
   local function handle_stdout(err, data)
     if err then print('handle_stdout err: ' .. err) end
 
-    if not data then
-      print('handle_stdout: no data')
-      return
-    end
+    if not data then return end
 
     buffer = buffer .. data
 
@@ -874,6 +831,8 @@ function M.setup(opts)
 end
 
 -- Create user commands
+
+-- V1: Floating window commands (single hidden buffer)
 vim.api.nvim_create_user_command("PromptOpen", function()
   M.open_prompt()
 end, { desc = "Open a floating markdown prompt window" })
@@ -898,6 +857,7 @@ vim.api.nvim_create_user_command("PromptSelectModel", function()
   M.select_model()
 end, { desc = "Select LLM model from available models" })
 
+-- V2: Split window commands (normal buffer)
 vim.api.nvim_create_user_command("PromptSplit", function()
   M.split_prompt()
 end, { desc = "Split the current window vertically and open a new prompt" })
