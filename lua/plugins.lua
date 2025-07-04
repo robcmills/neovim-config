@@ -152,7 +152,16 @@ return require('packer').startup {
       end,
     }
 
-    use 'stevearc/dressing.nvim'
+    use {
+      'stevearc/dressing.nvim',
+      config = function()
+        require('dressing').setup({
+          input = {
+            relative = 'editor',
+          },
+        })
+      end,
+    }
 
     use 'mustache/vim-mustache-handlebars'
 

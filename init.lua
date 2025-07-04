@@ -184,11 +184,15 @@ vim.keymap.set("n", "<leader>c", function()
 end, { desc = "Close buffer" })
 
 vim.keymap.set("n", "<leader>n", function()
-  local filename = vim.fn.input('Filename: ')
-  if filename then
-    vim.cmd(':e %:h/' .. filename)
-    vim.cmd(':w')
-  end
+  vim.ui.input({
+    prompt = 'Filename: ',
+    default = '',
+  }, function(filename)
+    if filename and filename ~= '' then
+      vim.cmd(':e %:h/' .. filename)
+      vim.cmd(':w')
+    end
+  end)
 end, { desc = "New buffer" })
 
 -- winbar

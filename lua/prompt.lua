@@ -75,6 +75,7 @@ Autosave Feature:
 - Quitting nvim while prompt window is open throws many errors
 - Add "inline" prompts (meta+k) for code edits
 - Add agent mode?
+- Add custom markdown formatting
 
 --]]
 
