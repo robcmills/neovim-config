@@ -17,16 +17,12 @@ Streams response directly to buffer.
 - Add more providers support
 - Add token counts and costs stats
 - Add sqlite db for storing more data
-- Add split window support (instead of floating window)
 - Enable multiple prompts simultaneously (just use files in history_dir,
   instead of a single shared buffer)
 - Model picker configurable format
 - Add leaderboard sorting to model picker
-- Add support for chats longer than one question and answer
 - Add support for thinking models
 - Add support for attaching files
-- Move state into object
-- Disable buffer editing when streaming response
 - Enable cancellation of streaming request
 - UI
 - Tests
