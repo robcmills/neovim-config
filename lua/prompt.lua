@@ -459,29 +459,7 @@ function M.load_prompt_history()
       return
     end
 
-    -- Read the selected file
-    local file = io.open(choice.filepath, "r")
-    if not file then
-      vim.notify("Failed to read file: " .. choice.filepath, vim.log.levels.ERROR)
-      return
-    end
-
-    local content = file:read("*all")
-    file:close()
-
-    -- Load content into prompt buffer
-    if prompt_bufnr and vim.api.nvim_buf_is_valid(prompt_bufnr) then
-      vim.api.nvim_buf_set_lines(prompt_bufnr, 0, -1, false, vim.split(content, "\n"))
-      current_chat_filename = choice.filename
-      vim.notify("Loaded prompt from: " .. choice.filename, vim.log.levels.INFO)
-
-      -- Open the prompt window if not already open
-      if not prompt_winid or not vim.api.nvim_win_is_valid(prompt_winid) then
-        M.open_prompt()
-      end
-    else
-      vim.notify("Prompt buffer not available", vim.log.levels.ERROR)
-    end
+    vim.cmd("e " .. choice.filepath)
   end)
 end
 
@@ -604,13 +582,9 @@ function M.setup(opts)
   end
 end
 
--- Create user commands
+-- User commands
 
 -- V1: Floating window commands (single hidden buffer)
-vim.api.nvim_create_user_command("PromptHistory", function()
-  M.load_prompt_history()
-end, { desc = "Browse and load prompt history" })
-
 vim.api.nvim_create_user_command("PromptSelectModel", function()
   M.select_model()
 end, { desc = "Select LLM model from available models" })
@@ -627,5 +601,9 @@ end, { desc = "Split the current window vertically and open a new prompt" })
 vim.api.nvim_create_user_command("PromptSubmitChat", function()
   M.submit_chat()
 end, { desc = "Submit chat buffer with parsed messages to OpenRouter API" })
+
+vim.api.nvim_create_user_command("PromptHistory", function()
+  M.load_prompt_history()
+end, { desc = "Browse and load prompt history" })
 
 return M
