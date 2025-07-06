@@ -25,14 +25,11 @@ Streams response directly to buffer.
 - Add support for chats longer than one question and answer
 - Add support for thinking models
 - Add support for attaching files
-- Resize window when buffer lines length exceeds window height
-- Resize window when buffer longest line width exceeds window width
 - Move state into object
 - Disable buffer editing when streaming response
 - Enable cancellation of streaming request
 - UI
 - Tests
-- Quitting nvim while prompt window is open throws many errors
 - Add "inline" prompts (meta+k) for code edits
 - Add agent mode?
 - Add custom markdown formatting
@@ -46,24 +43,17 @@ local OPENROUTER_API_V1_CHAT_COMPLETIONS_URL = 'https://openrouter.ai/api/v1/cha
 local OPENROUTER_API_V1_MODELS_URL = 'https://openrouter.ai/api/v1/models'
 
 local config = {
-  width = 80,
-  height = 50,
-  border = "rounded",
-  title = " prompt.md ",
-  title_pos = "right",
+  chat_delineator = "● %s:",
+  history_date_format = "%Y-%m-%dT%H:%M:%S",
+  history_dir = "~/.local/share/nvim/prompt_history/",
+  max_filename_length = 75,
   model = "anthropic/claude-sonnet-4",
   models_path = "~/.local/share/nvim/prompt_models.json",
-  chat_delineator = "● %s:",
-  history_dir = "~/.local/share/nvim/prompt_history/",
-  history_date_format = "%Y-%m-%dT%H:%M:%S",
-  max_filename_length = 75,
-  window_position = "right", -- "center", "left", or "right"
 }
 
 -- State
 local prompt_bufnr = nil
 local prompt_winid = nil
-local current_chat_filename = nil
 
 -- Utility functions
 
@@ -95,116 +85,9 @@ local function get_timestamp_filename()
   return timestamp .. ".md"
 end
 
-local function save_chat_history(chat_id, content)
-  ensure_history_dir()
-  local filepath = get_history_dir() .. chat_id
-  local file = io.open(filepath, "w")
-  if file then
-    file:write(content)
-    file:close()
-  else
-    vim.notify("Failed to save chat history to " .. filepath, vim.log.levels.ERROR)
-  end
-end
-
 local function get_buffer_content(bufnr)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   return table.concat(lines, "\n")
-end
-
-local function sync_chat_history()
-  if not current_chat_filename then
-    return
-  end
-
-  if not prompt_bufnr or not vim.api.nvim_buf_is_valid(prompt_bufnr) then
-    return
-  end
-
-  local content = get_buffer_content(prompt_bufnr)
-  save_chat_history(current_chat_filename, content)
-end
-
-local function get_window_config()
-  local screen_width = vim.o.columns
-  local screen_height = vim.o.lines
-  local position = config.window_position or "center"
-
-  local width, height, col, row
-
-  if position == "left" then
-    width = config.width
-    height = screen_height - 4 -- Full height minus borders
-    col = 0
-    row = 0
-  elseif position == "right" then
-    width = config.width
-    height = screen_height - 4 -- Full height minus borders
-    col = screen_width - width
-    row = 0
-  else
-    -- Default to center positioning
-    width = config.width
-    height = config.height
-    col = math.floor((screen_width - width) / 2)
-    row = math.floor((screen_height - height) / 2)
-  end
-
-  return {
-    border = config.border,
-    col = col,
-    footer = string.format(" Model: %s ", config.model),
-    height = height,
-    relative = "editor",
-    row = row,
-    style = "minimal",
-    title = config.title,
-    title_pos = config.title_pos,
-    width = width,
-  }
-end
-
-local function create_markdown_buffer()
-  local bufnr = vim.api.nvim_create_buf(false, true)
-  vim.bo[bufnr].modifiable = true
-  vim.bo[bufnr].buftype = 'nofile'
-  vim.bo[bufnr].swapfile = false
-  vim.bo[bufnr].bufhidden = "hide"
-  vim.bo[bufnr].filetype = "markdown"
-  vim.bo[bufnr].buflisted = false
-  vim.api.nvim_buf_set_name(bufnr, "prompt://markdown")
-  return bufnr
-end
-
-local function get_or_create_prompt_buffer()
-  -- If we already have a valid prompt buffer, return it
-  if prompt_bufnr and vim.api.nvim_buf_is_valid(prompt_bufnr) then
-    return prompt_bufnr
-  end
-
-  -- Otherwise create a new one
-  prompt_bufnr = create_markdown_buffer()
-  return prompt_bufnr
-end
-
-local function setup_keymaps(bufnr)
-  local opts = { noremap = true, silent = true, buffer = bufnr }
-  vim.keymap.set("n", "q", function()
-    M.close_prompt()
-  end, opts)
-end
-
-local function setup_autocommands(bufnr)
-  local group = vim.api.nvim_create_augroup("PromptWindow", { clear = true })
-
-  -- Close window when leaving it (but don't delete buffer)
-  vim.api.nvim_create_autocmd("WinLeave", {
-    group = group,
-    buffer = bufnr,
-    callback = function()
-      M.close_prompt()
-    end,
-  })
 end
 
 -- OpenRouter API functions
@@ -366,15 +249,6 @@ local function append_to_buffer(bufnr, text)
   end)
 end
 
-local function rename_file(old_path, new_path)
-  local success = os.rename(old_path, new_path)
-  if not success then
-    vim.notify("Failed to rename file from " .. old_path .. " to " .. new_path, vim.log.levels.ERROR)
-    return false
-  end
-  return true
-end
-
 local function sanitize_filename(text)
   -- Remove punctuation and convert to lowercase
   local sanitized = string.lower(text)
@@ -436,60 +310,6 @@ Respond with only the title and nothing else.
     model = config.model,
     stream = false,
     on_success = on_success
-  })
-end
-
-function M.submit_prompt()
-  if not prompt_bufnr or not vim.api.nvim_buf_is_valid(prompt_bufnr) then
-    vim.notify("No prompt buffer found. Use :PromptOpen or :PromptNew first.", vim.log.levels.WARN)
-    return
-  end
-
-  local buffer_content = get_buffer_content(prompt_bufnr)
-  if buffer_content == "" then
-    vim.notify("Prompt buffer is empty.", vim.log.levels.WARN)
-    return
-  end
-
-  if current_chat_filename == nil then
-    current_chat_filename = get_timestamp_filename()
-  end
-
-  save_chat_history(current_chat_filename, buffer_content)
-
-  local callback = function(summary_filename)
-    -- Rename the file
-    local old_path = get_history_dir() .. current_chat_filename
-    local new_path = get_history_dir() .. summary_filename
-
-    if rename_file(old_path, new_path) then
-      current_chat_filename = summary_filename
-      vim.notify("Renamed prompt file to: " .. summary_filename, vim.log.levels.INFO)
-    end
-  end
-
-  get_prompt_summary(current_chat_filename, buffer_content, callback)
-
-  add_chat_delineator(prompt_bufnr, config.model)
-
-  local messages = {
-    { role = "user", content = buffer_content }
-  }
-
-  make_openrouter_request({
-    messages = messages,
-    model = config.model,
-    stream = true,
-    on_success = function()
-      -- Sync the final content including response to history file
-      sync_chat_history()
-      if prompt_bufnr and vim.api.nvim_buf_is_valid(prompt_bufnr) then
-        vim.bo[prompt_bufnr].modifiable = true
-      end
-    end,
-    on_delta_content = function(content)
-      append_to_buffer(prompt_bufnr, content)
-    end
   })
 end
 
@@ -601,42 +421,6 @@ end
 
 -- Public functions
 
-function M.open_prompt()
-  if prompt_winid and vim.api.nvim_win_is_valid(prompt_winid) then
-    M.close_prompt()
-  end
-
-  -- Get or create the prompt buffer (this will reuse existing content)
-  local bufnr = get_or_create_prompt_buffer()
-
-  local win_config = get_window_config()
-  prompt_winid = vim.api.nvim_open_win(bufnr, true, win_config)
-
-  vim.wo[prompt_winid].wrap = true
-  vim.wo[prompt_winid].linebreak = true
-  vim.wo[prompt_winid].cursorline = true
-
-  setup_keymaps(bufnr)
-  setup_autocommands(bufnr)
-
-  if vim.api.nvim_buf_line_count(bufnr) <= 1 then
-    vim.cmd("startinsert")
-  end
-end
-
-function M.close_prompt()
-  if prompt_winid and vim.api.nvim_win_is_valid(prompt_winid) then
-    vim.api.nvim_win_close(prompt_winid, true)
-    prompt_winid = nil
-  end
-end
-
-function M.clear_prompt()
-  if prompt_bufnr and vim.api.nvim_buf_is_valid(prompt_bufnr) then
-    vim.api.nvim_buf_set_lines(prompt_bufnr, 0, -1, false, {})
-  end
-end
-
 function M.load_prompt_history()
   ensure_history_dir()
   local history_dir = get_history_dir()
@@ -699,15 +483,6 @@ function M.load_prompt_history()
       vim.notify("Prompt buffer not available", vim.log.levels.ERROR)
     end
   end)
-end
-
-local function update_window_footer()
-  if not prompt_winid or not vim.api.nvim_win_is_valid(prompt_winid) then
-    return
-  end
-  local win_config = vim.api.nvim_win_get_config(prompt_winid)
-  win_config.footer = string.format(" Model: %s ", config.model)
-  vim.api.nvim_win_set_config(prompt_winid, win_config)
 end
 
 function M.select_model()
@@ -795,7 +570,6 @@ function M.select_model()
 
     config.model = choice.id
     vim.notify("Selected model: " .. choice.name, vim.log.levels.INFO)
-    update_window_footer()
   end)
 end
 
@@ -833,14 +607,6 @@ end
 -- Create user commands
 
 -- V1: Floating window commands (single hidden buffer)
-vim.api.nvim_create_user_command("PromptOpen", function()
-  M.open_prompt()
-end, { desc = "Open a floating markdown prompt window" })
-
-vim.api.nvim_create_user_command("PromptSubmit", function()
-  M.submit_prompt()
-end, { desc = "Submit prompt to OpenRouter API for AI completion" })
-
 vim.api.nvim_create_user_command("PromptHistory", function()
   M.load_prompt_history()
 end, { desc = "Browse and load prompt history" })
