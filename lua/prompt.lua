@@ -32,7 +32,7 @@ Streams response directly to buffer.
 - Tests
 - Add "inline" prompts (meta+k) for code edits
 - Add agent mode?
-- Add custom markdown formatting
+- Add custom markdown formatting (delineators)
 
 --]]
 
@@ -51,9 +51,6 @@ local config = {
   models_path = "~/.local/share/nvim/prompt_models.json",
 }
 
--- State
-local prompt_bufnr = nil
-local prompt_winid = nil
 
 -- Utility functions
 
@@ -463,6 +460,10 @@ function M.load_prompt_history()
   end)
 end
 
+function M.get_model()
+  print(config.model)
+end
+
 function M.select_model()
   local models_path = get_models_path()
 
@@ -510,38 +511,12 @@ function M.select_model()
     return
   end
 
-  -- Temporarily disable the WinLeave autocommand to prevent the prompt window from closing
-  local autocommand_group = vim.api.nvim_get_autocmds({ group = "PromptWindow" })
-  local winleave_autocmd = nil
-  for _, autocmd in ipairs(autocommand_group) do
-    if autocmd.event == "WinLeave" then
-      winleave_autocmd = autocmd
-      break
-    end
-  end
-
-  -- Disable the WinLeave autocommand if it exists
-  if winleave_autocmd then
-    vim.api.nvim_del_autocmd(winleave_autocmd.id)
-  end
-
   vim.ui.select(model_choices, {
     prompt = "Select a model:",
     format_item = function(item)
       return item.display
     end,
   }, function(choice)
-    -- Re-enable the WinLeave autocommand after the selection is made
-    if winleave_autocmd and prompt_bufnr and vim.api.nvim_buf_is_valid(prompt_bufnr) then
-      vim.api.nvim_create_autocmd("WinLeave", {
-        group = "PromptWindow",
-        buffer = prompt_bufnr,
-        callback = function()
-          M.close_prompt()
-        end,
-      })
-    end
-
     if not choice then
       return
     end
@@ -584,12 +559,14 @@ end
 
 -- User commands
 
--- V1: Floating window commands (single hidden buffer)
+vim.api.nvim_create_user_command("PromptModelGet", function()
+  M.get_model()
+end, { desc = "Print current model" })
+
 vim.api.nvim_create_user_command("PromptSelectModel", function()
   M.select_model()
-end, { desc = "Select LLM model from available models" })
+end, { desc = "Select model" })
 
--- V2: Split window commands (normal buffer)
 vim.api.nvim_create_user_command("PromptNew", function()
   M.new_prompt()
 end, { desc = "Create a new prompt" })
@@ -604,6 +581,6 @@ end, { desc = "Submit chat buffer with parsed messages to OpenRouter API" })
 
 vim.api.nvim_create_user_command("PromptHistory", function()
   M.load_prompt_history()
-end, { desc = "Browse and load prompt history" })
+end, { desc = "Select and load from prompt history" })
 
 return M
