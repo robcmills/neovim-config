@@ -360,7 +360,7 @@ local function parse_messages_from_chat_buffer(buffer_content)
   return messages
 end
 
-function M.submit_chat()
+function M.submit_prompt()
   local current_bufnr = vim.api.nvim_get_current_buf()
   local buffer_content = get_buffer_content(current_bufnr)
 
@@ -563,7 +563,7 @@ vim.api.nvim_create_user_command("PromptModelGet", function()
   M.get_model()
 end, { desc = "Print current model" })
 
-vim.api.nvim_create_user_command("PromptSelectModel", function()
+vim.api.nvim_create_user_command("PromptModelSelect", function()
   M.select_model()
 end, { desc = "Select model" })
 
@@ -575,8 +575,8 @@ vim.api.nvim_create_user_command("PromptSplit", function()
   M.split_prompt()
 end, { desc = "Split the current window vertically and open a new prompt" })
 
-vim.api.nvim_create_user_command("PromptSubmitChat", function()
-  M.submit_chat()
+vim.api.nvim_create_user_command("PromptSubmit", function()
+  M.submit_prompt()
 end, { desc = "Submit chat buffer with parsed messages to OpenRouter API" })
 
 vim.api.nvim_create_user_command("PromptHistory", function()
