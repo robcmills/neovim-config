@@ -10,7 +10,7 @@ Markdown Prompt Plugin for Neovim
 
 Enables prompting from a markdown buffer.
 Submits prompts to OpenRouter API for LLM completion.
-Streams response back to buffer.
+Streams response directly to buffer.
 
 ### Todo
 
@@ -799,20 +799,14 @@ function M.select_model()
   end)
 end
 
-function M.split_prompt()
-  -- Split the current window vertically
-  vim.cmd("vsplit")
-  vim.cmd("wincmd L")
-
-  -- Create a new prompt file in the history_dir
+function M.new_prompt()
   ensure_history_dir()
   local new_filename = get_timestamp_filename()
   local new_filepath = get_history_dir() .. new_filename
 
-  -- Create the new buffer with proper settings
-  local bufnr = vim.api.nvim_create_buf(true, false) -- listed, not scratch
+  local bufnr = vim.api.nvim_create_buf(true, false)
   vim.bo[bufnr].modifiable = true
-  vim.bo[bufnr].buftype = '' -- normal buffer, not nofile
+  vim.bo[bufnr].buftype = ''
   vim.bo[bufnr].swapfile = false
   vim.bo[bufnr].bufhidden = "hide"
   vim.bo[bufnr].filetype = "markdown"
@@ -821,6 +815,12 @@ function M.split_prompt()
   vim.api.nvim_win_set_buf(0, bufnr)
 
   vim.cmd("startinsert")
+end
+
+function M.split_prompt()
+  vim.cmd("vsplit")
+  vim.cmd("wincmd L")
+  M.new_prompt()
 end
 
 -- Setup function
@@ -841,14 +841,6 @@ vim.api.nvim_create_user_command("PromptSubmit", function()
   M.submit_prompt()
 end, { desc = "Submit prompt to OpenRouter API for AI completion" })
 
-vim.api.nvim_create_user_command("PromptNew", function()
-  M.clear_prompt()
-  current_chat_filename = nil
-  if not prompt_winid or not vim.api.nvim_win_is_valid(prompt_winid) then
-    M.open_prompt()
-  end
-end, { desc = "Create a new prompt" })
-
 vim.api.nvim_create_user_command("PromptHistory", function()
   M.load_prompt_history()
 end, { desc = "Browse and load prompt history" })
@@ -858,6 +850,10 @@ vim.api.nvim_create_user_command("PromptSelectModel", function()
 end, { desc = "Select LLM model from available models" })
 
 -- V2: Split window commands (normal buffer)
+vim.api.nvim_create_user_command("PromptNew", function()
+  M.new_prompt()
+end, { desc = "Create a new prompt" })
+
 vim.api.nvim_create_user_command("PromptSplit", function()
   M.split_prompt()
 end, { desc = "Split the current window vertically and open a new prompt" })
