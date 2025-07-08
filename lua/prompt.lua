@@ -1,5 +1,4 @@
 --[[
-
                                                               ██
 ██████ █████ ██████ ██████████ ██████ ██████   ██████████ ██████
 ██  ██ ██    ██  ██ ██  ██  ██ ██  ██   ██     ██  ██  ██ ██  ██
@@ -14,6 +13,7 @@ Streams response directly to buffer.
 
 ### Todo
 
+- Add command to update models
 - Add more providers support
 - Add token counts and costs stats
 - Add sqlite db for storing more data
@@ -48,8 +48,6 @@ local config = {
 }
 
 
--- Utility functions
-
 local function get_history_dir()
   local dir = config.history_dir
   if string.sub(dir, 1, 1) == "~" then
@@ -83,8 +81,23 @@ local function get_buffer_content(bufnr)
   return table.concat(lines, "\n")
 end
 
--- OpenRouter API functions
+---@class Message Message object for conversation
+---@field role "user"|"assistant"|"system"|"developer"|"tool" The role of the message sender
+---@field content string The content of the message
 
+---@alias OnDeltaContent fun(content: string): nil Callback for streaming content deltas
+---@alias OnDeltaReasoning fun(reasoning: string): nil Callback for streaming reasoning deltas
+---@alias OnSuccess fun(content: string): nil Callback on successful completion
+
+---@class OpenRouterOpts Options for the OpenRouter API request
+---@field model string The model to use for the request
+---@field messages Message[] Array of message objects for the conversation
+---@field stream boolean Whether to use streaming response
+---@field on_delta_content? OnDeltaContent Optional callback for streaming content deltas
+---@field on_delta_reasoning? OnDeltaReasoning Optional callback for streaming reasoning deltas
+---@field on_success? OnSuccess Optional callback on successful completion. For streaming requests, called with no args. For non-streaming, called with response content string.
+
+---@param opts OpenRouterOpts
 local function make_openrouter_request(opts)
   if not OPENROUTER_API_KEY then
     vim.notify("OPENROUTER_API_KEY environment variable not set", vim.log.levels.ERROR)
@@ -140,12 +153,17 @@ local function make_openrouter_request(opts)
           end
 
           local success, parsed = pcall(vim.json.decode, json)
-          if success and parsed.choices and parsed.choices[1] and parsed.choices[1].delta and parsed.choices[1].delta.content then
-            if opts.on_delta_content then
-              opts.on_delta_content(parsed.choices[1].delta.content)
-            end
-          else
+
+          if not success then
             print('handle_stdout: failed to parse json data: ' .. json)
+          elseif parsed.choices and parsed.choices[1] and parsed.choices[1].delta then
+            local delta = parsed.choices[1].delta
+            if opts.on_delta_content and delta.content then
+              opts.on_delta_content(delta.content)
+            end
+            if opts.on_delta_reasoning and delta.reasoning and type(delta.reasoning) == "string" then
+              opts.on_delta_reasoning(delta.reasoning)
+            end
           end
         elseif string.sub(line, 1, 1) == ":" then
           -- Ignore SSE comments
@@ -175,7 +193,10 @@ local function make_openrouter_request(opts)
           if success and parsed.choices and parsed.choices[1] and parsed.choices[1].message and parsed.choices[1].message.content then
             opts.on_success(parsed.choices[1].message.content)
           else
-            vim.notify("Failed to parse OpenRouter API response", vim.log.levels.ERROR)
+            vim.notify(
+              "Failed to parse OpenRouter API response: " .. buffer,
+              vim.log.levels.ERROR
+            )
           end
         end
       end
@@ -356,6 +377,9 @@ local function parse_messages_from_chat_buffer(buffer_content)
   return messages
 end
 
+
+-- Public functions
+
 function M.submit_prompt()
   local current_bufnr = vim.api.nvim_get_current_buf()
   local buffer_content = get_buffer_content(current_bufnr)
@@ -372,6 +396,8 @@ function M.submit_prompt()
     return
   end
 
+  -- determine if the current prompt buffer has a summary already
+  -- or is only a datetime filename
   local current_filename = vim.fn.expand("%:t")
   local datetime_filename = get_timestamp_filename()
   if string.len(current_filename) == string.len(datetime_filename) then
@@ -404,15 +430,15 @@ function M.submit_prompt()
     stream = true,
     on_success = function()
       add_chat_delineator(current_bufnr, 'user')
-      vim.cmd("write")
     end,
     on_delta_content = function(content)
       append_to_buffer(current_bufnr, content)
-    end
+    end,
+    on_delta_reasoning = function(reasoning)
+      append_to_buffer(current_bufnr, reasoning)
+    end,
   })
 end
-
--- Public functions
 
 function M.load_prompt_history()
   ensure_history_dir()
@@ -546,12 +572,12 @@ function M.split_prompt()
   M.new_prompt()
 end
 
--- Setup function
 function M.setup(opts)
   if opts then
     config = vim.tbl_deep_extend("force", config, opts)
   end
 end
+
 
 -- User commands
 
