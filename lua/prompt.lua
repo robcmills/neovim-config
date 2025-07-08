@@ -382,6 +382,7 @@ end
 
 function M.submit_prompt()
   local current_bufnr = vim.api.nvim_get_current_buf()
+  local original_filepath = vim.api.nvim_buf_get_name(current_bufnr)
   local buffer_content = get_buffer_content(current_bufnr)
 
   if buffer_content == "" then
@@ -411,12 +412,16 @@ function M.submit_prompt()
     end
 
     if first_user_message then
+      vim.cmd("write")
       local callback = function(summary_filename)
-        vim.api.nvim_buf_set_name(
-          current_bufnr,
-          get_history_dir() .. summary_filename
-        )
-        vim.cmd("write")
+        local new_filepath = vim.fs.joinpath(get_history_dir(), summary_filename)
+        local success, err = pcall(vim.fn.rename, original_filepath, new_filepath)
+        if not success then
+          vim.notify("Error renaming prompt file: " .. err, vim.log.levels.ERROR)
+          return
+        end
+        vim.api.nvim_buf_set_name(current_bufnr, new_filepath)
+        vim.cmd("write!")
       end
       get_prompt_summary(current_filename, first_user_message, callback)
     end
@@ -430,6 +435,7 @@ function M.submit_prompt()
     stream = true,
     on_success = function()
       add_chat_delineator(current_bufnr, 'user')
+      vim.cmd("write")
     end,
     on_delta_content = function(content)
       append_to_buffer(current_bufnr, content)
@@ -563,7 +569,10 @@ function M.new_prompt()
   vim.api.nvim_buf_set_name(bufnr, new_filepath)
   vim.api.nvim_win_set_buf(0, bufnr)
 
-  vim.cmd("startinsert")
+  vim.api.nvim_buf_call(bufnr, function()
+    vim.cmd("write")
+    vim.cmd("startinsert")
+  end)
 end
 
 function M.split_prompt()
