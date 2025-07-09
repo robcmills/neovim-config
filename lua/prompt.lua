@@ -13,7 +13,14 @@ Streams response directly to buffer.
 
 ### Todo
 
+- Open source
+  + Migrate to own repo
+  + Add proper directory structure
+- Add reasoning formatting
+- Add support for thinking models
+  + [x] Gemini 2.5
 - Add command to update models
+- Add command to manually trigger summary rename
 - Add more providers support
 - Add token counts and costs stats
 - Add sqlite db for storing more data
@@ -21,11 +28,10 @@ Streams response directly to buffer.
   instead of a single shared buffer)
 - Model picker configurable format
 - Add leaderboard sorting to model picker
-- Add support for thinking models
 - Add support for attaching files
 - Enable cancellation of streaming request
 - UI
-- Tests
+- Tests (all models)
 - Add "inline" prompts (meta+k) for code edits
 - Add agent mode?
 - Add custom markdown formatting (delineators)
