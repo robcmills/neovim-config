@@ -46,6 +46,9 @@ local OPENROUTER_API_V1_MODELS_URL = 'https://openrouter.ai/api/v1/models'
 
 local config = {
   chat_delineator = "● %s:",
+  assistant_label = "[● %s:]",
+  reasoning_label = "[∴ reasoning:]",
+  user_label = "[○ user:]",
   history_date_format = "%Y-%m-%dT%H:%M:%S",
   history_dir = "~/.local/share/nvim/prompt_history/",
   max_filename_length = 75,

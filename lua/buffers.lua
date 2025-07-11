@@ -48,6 +48,8 @@ The code is written in lua.
 - bug: double letter shortcuts don't work because "ab" just jumps to "a" on first keypress
 - bug: shortcut lettering to a buffer should open in _last focused window_
 - add config option to exclude letters from shortcuts
+  + debug why q shortcut doesn't work
+- add config option to exclude filenames and filetypes
 - enable clicking on buffer name to open it
 - add debug log to file
 - add option to show buffers list in a floating window (even if sidebar is open)
