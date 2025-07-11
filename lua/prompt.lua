@@ -1,9 +1,9 @@
 --[[
-                                                              ██
-██████ █████ ██████ ██████████ ██████ ██████   ██████████ ██████
-██  ██ ██    ██  ██ ██  ██  ██ ██  ██   ██     ██  ██  ██ ██  ██
-██████ ██    ██████ ██  ██  ██ ██████   ██  ██ ██  ██  ██ ██████
-██                             ██
+                                                                                         ██
+██████ ██████ █████ ██████ ██████ █████ ██████ ██████████ ██████ ██████   ██████████ ██████
+██  ██ ██  ██ ██▄▄█ ██  ██ ██  ██ ██    ██  ██ ██  ██  ██ ██  ██   ██     ██  ██  ██ ██  ██
+██████ ██████ ██▄▄▄ ██  ██ ██████ ██    ██████ ██  ██  ██ ██████   ██  ██ ██  ██  ██ ██████
+       ██                  ██                             ██
 
 Markdown Prompt Plugin for Neovim
 
@@ -19,6 +19,12 @@ Streams response directly to buffer.
 - Add reasoning formatting
 - Add support for thinking models
   + [x] Gemini 2.5
+- Add custom labels
+  assistant_label = "[● %s:]",
+  reasoning_label = "[∴ reasoning:]",
+  user_label = "[○ user:]",
+- Refactor default config directory
+  ~/.config/nvim/prompt/
 - Add command to update models
 - Add command to manually trigger summary rename
 - Add more providers support
@@ -46,9 +52,6 @@ local OPENROUTER_API_V1_MODELS_URL = 'https://openrouter.ai/api/v1/models'
 
 local config = {
   chat_delineator = "● %s:",
-  assistant_label = "[● %s:]",
-  reasoning_label = "[∴ reasoning:]",
-  user_label = "[○ user:]",
   history_date_format = "%Y-%m-%dT%H:%M:%S",
   history_dir = "~/.local/share/nvim/prompt_history/",
   max_filename_length = 75,
