@@ -165,6 +165,13 @@ return require('packer').startup {
 
     use 'mustache/vim-mustache-handlebars'
 
+    use {
+      '/Users/robcmills/src/prompt.nvim',
+      config = function()
+        require('prompt').setup()
+      end,
+    }
+
   end,
   config = {
     display = {

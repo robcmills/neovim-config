@@ -53,6 +53,7 @@ The code is written in lua.
 - enable clicking on buffer name to open it
 - add debug log to file
 - add option to show buffers list in a floating window (even if sidebar is open)
+- when a buffer is deleted, update cursor position in buffers window
 - fix repeated calls to :BuffersMove* not working
 - handle :file renames
 - handle filesystem changes (e.g. rm, mv, cp)

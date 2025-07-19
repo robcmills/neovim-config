@@ -195,6 +195,23 @@ vim.keymap.set("n", "<leader>n", function()
   end)
 end, { desc = "New buffer" })
 
+-- ~/.local/share/nvim/prompt_history/2025-07-16T21:31:23-neovim-rename-file-and-buffer-2.md
+vim.api.nvim_create_user_command('Rename', function()
+  local old_name = vim.api.nvim_buf_get_name(0)
+  local old_filename = vim.fn.fnamemodify(old_name, ':t')
+  vim.ui.input({
+    prompt = 'New name: ',
+    default = old_filename,
+  }, function(new_name)
+    if new_name ~= '' and new_name ~= old_filename then
+      local new_path = vim.fn.fnamemodify(old_name, ':h') .. '/' .. new_name
+      vim.cmd('saveas ' .. vim.fn.fnameescape(new_path))
+      vim.fn.delete(old_name)
+      vim.notify('Renamed ' .. old_filename .. ' to ' .. new_name)
+    end
+  end)
+end, { desc = "Rename current file" })
+
 -- winbar
 -- vim.opt.winbar = '%f'
 
@@ -491,8 +508,10 @@ end, { desc = 'Reset Buffers plugin' })
 -- require('splash')
 
 -- markdown prompt
-package.loaded['prompt'] = nil
-require('prompt').setup()
+-- package.loaded['prompt'] = nil
+-- require('prompt').setup()
+
+-- print(vim.inspect(vim.api.nvim_list_runtime_paths()))
 
 vim.api.nvim_create_user_command('Messages', function()
   vim.cmd('enew')
