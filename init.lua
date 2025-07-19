@@ -507,12 +507,6 @@ end, { desc = 'Reset Buffers plugin' })
 
 -- require('splash')
 
--- markdown prompt
--- package.loaded['prompt'] = nil
--- require('prompt').setup()
-
--- print(vim.inspect(vim.api.nvim_list_runtime_paths()))
-
 vim.api.nvim_create_user_command('Messages', function()
   vim.cmd('enew')
   vim.api.nvim_buf_set_lines(0, 0, -1, false,
