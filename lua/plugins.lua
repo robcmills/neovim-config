@@ -148,6 +148,7 @@ return require('packer').startup {
       config = function()
         require('render-markdown').setup({
           file_types = { 'markdown' },
+          sign = { enabled = false },
         })
       end,
     }

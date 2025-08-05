@@ -66,7 +66,7 @@ vim.g.mapleader = " "
 vim.keymap.set("", "<Space>", "<Nop>") -- disable space because leader
 
 
-vim.keymap.set("i", "<Tab>", "<Esc>")
+-- vim.keymap.set("i", "<Tab>", "<Esc>")
 vim.keymap.set("n", "U", "<C-r>", { desc = "Redo" })
 vim.keymap.set("n", "<C-j>", "gJi <ESC>ciW <ESC>", { desc = "Join lines (and remove excess whitespace)" })
 -- vim.keymap.set("n", "s", ":bufdo if empty(getbufvar(bufnr(), '&buftype')) | w | endif<cr>", { desc = "Save" })
@@ -77,6 +77,7 @@ vim.keymap.set("n", "<leader>h", ":nohlsearch<cr>", { desc = "No Highlight" })
 vim.keymap.set("n", "<leader>A", "gg0vG$y", { desc = "Copy all" })
 vim.keymap.set("n", "<leader>'", "ciw''<ESC>P", { desc = "Surround word with single quotes" })
 vim.keymap.set("n", '<leader>"', 'ciw""<ESC>P', { desc = "Surround word with double quotes" })
+vim.keymap.set("n", "<leader>`", "ciw``<ESC>P", { desc = "Surround word with backticks" })
 vim.keymap.set("n", '<leader>(', 'ciw()<ESC>P', { desc = "Surround word with parens" })
 vim.keymap.set("n", '<leader>{', 'ciw{}<ESC>P', { desc = "Surround word with curly brackets" })
 
@@ -195,7 +196,6 @@ vim.keymap.set("n", "<leader>n", function()
   end)
 end, { desc = "New buffer" })
 
--- ~/.local/share/nvim/prompt_history/2025-07-16T21:31:23-neovim-rename-file-and-buffer-2.md
 vim.api.nvim_create_user_command('Rename', function()
   local old_name = vim.api.nvim_buf_get_name(0)
   local old_filename = vim.fn.fnamemodify(old_name, ':t')
@@ -205,9 +205,9 @@ vim.api.nvim_create_user_command('Rename', function()
   }, function(new_name)
     if new_name ~= '' and new_name ~= old_filename then
       local new_path = vim.fn.fnamemodify(old_name, ':h') .. '/' .. new_name
-      vim.cmd('saveas ' .. vim.fn.fnameescape(new_path))
-      vim.fn.delete(old_name)
-      vim.notify('Renamed ' .. old_filename .. ' to ' .. new_name)
+      vim.fn.rename(old_name, new_path)
+      vim.api.nvim_buf_set_name(0, new_path)
+      vim.cmd('w!')
     end
   end)
 end, { desc = "Rename current file" })
@@ -528,4 +528,37 @@ vim.api.nvim_create_user_command('Hover', function()
     end
   end)
 end, { desc = 'Dump hover info into a new buffer' })
+
+vim.keymap.set('n', '-', ':PromptNew<cr>', { desc = 'New prompt' })
+vim.keymap.set('n', '=', ':PromptSubmit<cr>', { desc = 'Submit prompt' })
+
+vim.api.nvim_create_user_command('Link', function()
+  local line = vim.api.nvim_get_current_line()
+  local col = vim.fn.virtcol('.') -- Get current column (1-indexed)
+  local char = vim.fn.strcharpart(line, col - 1, 1) -- Get char under cursor (0-indexed substring)
+
+  -- Check if the character under the cursor is part of a URL
+  -- This is a basic heuristic; a more robust solution might involve parsing
+  -- or using a dedicated URL detection library.
+  local pattern = "([a-zA-Z]+://[%w%p%-%.%?%+%&%=%#%/]*)%f[%s%\"%]?" -- Basic URL pattern
+
+  -- Find the URL containing the cursor position
+  for url_match in line:gmatch(pattern) do
+    local start_pos, end_pos = line:find(url_match, 1, true) -- Find exact match
+    if start_pos and end_pos and col >= start_pos and col <= end_pos then
+      vim.fn.system({"brave", url_match})
+      return
+    end
+  end
+
+  -- If no URL found under cursor, try to find the first URL in the line
+  local first_url = line:match(pattern)
+  if first_url then
+    vim.fn.system({"brave", first_url})
+    return
+  end
+
+  -- If no URL found anywhere, inform the user
+  vim.notify("No URL found under cursor or in the current line.", vim.log.levels.WARN)
+end, { desc = 'Open the URL under cursor in Brave browser' })
 
