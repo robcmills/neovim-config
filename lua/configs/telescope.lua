@@ -8,6 +8,13 @@ local git_sorter = sorters.Sorter:new({
   end
 })
 
+local path_display = function(_, path)
+  local tail = require("telescope.utils").path_tail(path)
+  path = string.gsub(path, "src/js/", "")
+  path = string.gsub(path, tail .. "$", "")
+  return string.format("%s  |  %s", tail, path)
+end
+
 local telescope = require('telescope')
 
 telescope.setup({
@@ -54,12 +61,7 @@ telescope.setup({
       height = 0.75,
       },
       layout_strategy = 'vertical',
-      path_display = function(opts, path)
-        local tail = require("telescope.utils").path_tail(path)
-        path = string.gsub(path, "src/js/", "")
-        path = string.gsub(path, tail .. "$", "")
-        return string.format("%s  |  %s", tail, path)
-      end,
+      path_display = path_display,
       show_line = false,
       sort_lastused = true,
     },
@@ -69,6 +71,10 @@ telescope.setup({
     -- live_grep = {
       -- sorter = git_sorter,
     -- },
+    lsp_definitions = {
+      path_display = path_display,
+      show_line = false,
+    },
     lsp_references = {
       show_line = false
     },
@@ -88,7 +94,7 @@ telescope.load_extension('fzf')
 -- Examples
 -- :lua require('telescope.builtin').live_grep({ cwd = '.github' })
 -- :lua require('telescope.builtin').live_grep({ cwd = 'e2e' })
--- :lua require('telescope.builtin').live_grep({ cwd = 'src/js/projects/site/UploadBimTab' })
+-- :lua require('telescope.builtin').live_grep({ cwd = 'src/js/projects/site/SheetsAlignmentTab' })
 -- :lua require('telescope.builtin').live_grep({ cwd = '~/local/share/nvim/prompt/history' })
 -- :lua require('telescope.builtin').live_grep({ glob_pattern = "!yarn.lock" })
 -- :lua require('telescope.builtin').live_grep({ glob_pattern = "!node_modules", hidden = false })

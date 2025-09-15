@@ -129,6 +129,7 @@ vim.keymap.set('n', '<leader>t', function()
 end, { desc = 'Open a terminal buffer' })
 
 vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', { desc = 'Exit insert mode in terminal' })
+vim.keymap.set('t', '<C-q>', '<Esc>', { desc = 'Send Esc to terminal' })
 
 vim.keymap.set('t', '<C-k>', function()
   vim.fn.feedkeys("", 'n')
@@ -238,6 +239,9 @@ end, { desc = "Search references" })
 vim.keymap.set("n", "<leader>m", function()
   require("telescope.builtin").symbols()
 end, { desc = "Symbols" })
+vim.keymap.set('n', 'gd', function()
+  require('telescope.builtin').lsp_definitions()
+end, { noremap = true, silent = true })
 
 
 -- nvim-tree
@@ -529,6 +533,7 @@ vim.api.nvim_create_user_command('Hover', function()
   end)
 end, { desc = 'Dump hover info into a new buffer' })
 
+-- prompt.nvim
 vim.keymap.set('n', '-', ':PromptNew<cr>', { desc = 'New prompt' })
 vim.keymap.set('n', '=', ':PromptSubmit<cr>', { desc = 'Submit prompt' })
 

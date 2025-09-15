@@ -14,12 +14,18 @@ cmp.setup({
       -- vim.fn["UltiSnips#Anon"](args.body) -- For `ultisnips` users.
     end,
   },
-  sources = {
+  sources = cmp.config.sources({
     { name = 'nvim_lsp' },
     { name = 'luasnip' },
-    { name = 'path' },
+    {
+      name = 'path',
+      option = {
+        get_cwd = function() return vim.fn.getcwd() end,
+        trigger_characters = { '/', '.', '@' },
+      },
+    },
     { name = 'buffer' },
-  },
+  }),
 })
 
 -- Set configuration for specific filetype.
