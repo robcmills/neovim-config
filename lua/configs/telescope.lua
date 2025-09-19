@@ -101,6 +101,11 @@ telescope.load_extension('fzf')
 -- :lua require('telescope.builtin').live_grep({ no_ignore = true })
 -- :lua require('telescope.builtin').find_files({ cwd = 'src/js/openapi', no_ignore = true })
 -- :lua require('telescope.builtin').find_files({ cwd = 'prompt_history' })
+-- :lua require('telescope.builtin').find_files({ cwd = '~/.local/share/nvim/prompt/history', sorting_strategy = "descending" })
+-- :lua require('telescope.builtin').find_files({ cwd = '~/.local/share/nvim/prompt/history', find_command = { "bash", "-c", "ls -1 *.md | sort -r" } })
+
+-- ls -1 *.md | sort -r
+
 
 -- builtin.live_grep({opts})                      *telescope.builtin.live_grep()*
 --     Search for a string and get results live as you type, respects .gitignore

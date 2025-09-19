@@ -70,6 +70,7 @@ Example configuration:
 require('buffers').setup({
   width = 'auto',
   min_width = 25, -- minimum width when using auto width (default: 25)
+  max_width = 40, -- maximum width when using auto width (default: nil, no limit)
   side = "left", -- "left" or "right" (default: "left")
   colors = {
     error = { link = "ErrorMsg" }, -- Buffers with LSP errors (overrides other colors)
@@ -114,7 +115,8 @@ end
 
 ---@class BuffersConfig
 ---@field width number|string Width of the buffers window (number or 'auto')
----@field min_width number|nil Minimum width when using auto width (default: 20)
+---@field min_width number|nil Minimum width when using auto width (default: 25)
+---@field max_width number|nil Maximum width when using auto width (default: 40)
 ---@field side string Side of the screen to show buffers window ("left" or "right", default: "left")
 ---@field colors BuffersColors Color configuration
 
@@ -134,6 +136,7 @@ local state = {
   config = {
     width = 'auto',
     min_width = 25, -- minimum width when using auto width (default: 25)
+    max_width = 40, -- maximum width when using auto width (default: 50)
     side = 'left', -- default to left side
     colors = {
       error = { link = "ErrorMsg" }, -- Buffers with LSP errors (overrides other colors)
@@ -234,10 +237,10 @@ end
 -- Calculate auto width based on buffer names
 local function calculate_auto_width()
   local buffers = get_ordered_buffers()
-  local max_width = state.config.min_width or 25 -- minimum width
+  local calculated_width = state.config.min_width or 25 -- minimum width
 
   if #buffers == 0 then
-    return max_width
+    return calculated_width
   end
 
   -- Sort by focus order for letter assignment (same logic as render function)
@@ -269,10 +272,15 @@ local function calculate_auto_width()
     -- Format: "letter icon name" + 1 margin column
     local icon_len = icon ~= "" and (string.len(icon) + 1) or 0
     local line_width = string.len(letter) + 1 + icon_len + string.len(name) + 1
-    max_width = math.max(max_width, line_width)
+    calculated_width = math.max(calculated_width, line_width)
   end
 
-  return max_width
+  -- Apply max_width limit if configured
+  if state.config.max_width then
+    calculated_width = math.min(calculated_width, state.config.max_width)
+  end
+
+  return calculated_width
 end
 
 -- Get effective width (auto or configured)
@@ -702,6 +710,9 @@ function M.setup(config)
     end
     if config.side then
       state.config.side = config.side
+    end
+    if config.max_width then
+      state.config.max_width = config.max_width
     end
   end
 
