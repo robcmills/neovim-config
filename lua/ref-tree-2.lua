@@ -62,7 +62,7 @@ local function append_to_buffer(bufnr, text)
 end
 
 local function debug_node(node, bufnr)
-  local start_row, start_col, end_row, end_col = node:range()
+  local start_row, start_col, _, end_col = node:range()
   local child_count = node:child_count()
   local parent = node:parent()
   local parent_type = parent and parent:type() or "no parent"
@@ -72,7 +72,6 @@ local function debug_node(node, bufnr)
   print(" Child count:", child_count)
   print(" Parent type:", parent_type)
 
-  -- Optional: Print child types for more context (if child_count > 0)
   if child_count > 0 then
     print(" Child types:")
     for i = 0, child_count - 1 do
@@ -81,12 +80,11 @@ local function debug_node(node, bufnr)
     end
   end
 
-  -- Print the line with column marker
+  -- Print the line with column markers
   local lines = vim.api.nvim_buf_get_lines(bufnr, start_row, start_row + 1, false)
   local line = lines[1] or ""  -- Handle empty buffer
-  -- Mark target position with ^
   print(line)
-  print(string.rep(" ", start_col) .. "^")
+  print(string.rep(" ", start_col) .. "^" .. string.rep(" ", end_col - start_col - 1) .. "^")
 end
 
 -- Given a position in a file:
@@ -148,7 +146,7 @@ local function get_top_level_position(file_path, row, col)
     return nil
   end
 
-  -- debug_node(top_node, bufnr)
+  debug_node(top_node, bufnr)
 
   vim.api.nvim_buf_delete(bufnr, { force = true })
 
@@ -166,7 +164,7 @@ local function format_path(path)
 end
 
 -- Function to add references recursively to a node (async via callback)
-local function visit_node(node, client_bufnr, ref_tree_bufnr)
+local function visit_node(node, client_bufnr, ref_tree_bufnr, on_done)
   local indent = string.rep("  ", node.depth)
   append_to_buffer(ref_tree_bufnr, "\n" .. indent .. format_path(node.path))
 
@@ -182,15 +180,18 @@ local function visit_node(node, client_bufnr, ref_tree_bufnr)
   vim.lsp.buf_request(client_bufnr, "textDocument/references", params, function(err, result)
     if err then
       append_to_buffer(ref_tree_bufnr, "\nbuf_request err: " .. vim.inspect(err))
+      on_done()
       return
     end
     if not result then
       append_to_buffer(ref_tree_bufnr, "\nbuf_request result nil")
+      on_done()
       return
     end
 
-    append_to_buffer(ref_tree_bufnr, "\nbuf_request result: " .. vim.inspect(result))
+    append_to_buffer(ref_tree_bufnr, "\nbuf_request result: " .. #result)
 
+    -- Step 1: Synchronously build node.children from results (no recursion yet)
     for _, loc in ipairs(result) do
       local ref_path = vim.uri_to_fname(loc.uri)
       if ref_path ~= node.path then
@@ -205,11 +206,25 @@ local function visit_node(node, client_bufnr, ref_tree_bufnr)
             position = top_pos
           }
           table.insert(node.children, child)
-          if node.depth < MAX_DEPTH then
-            visit_node(child, client_bufnr, ref_tree_bufnr)
-          end
         end
       end
+    end
+
+    -- Step 2: If recursion allowed, process children sequentially (depth-first, no interleaving)
+    if node.depth < MAX_DEPTH then
+      local function process_next(idx)
+        if idx > #node.children then
+          on_done()  -- All siblings done
+          return
+        end
+        local child = node.children[idx]
+        visit_node(child, client_bufnr, ref_tree_bufnr, function()
+          process_next(idx + 1)  -- Proceed to next sibling only after this subtree is fully done
+        end)
+      end
+      process_next(1)
+    else
+      on_done()  -- No recursion; done with this node
     end
   end)
 end
@@ -263,7 +278,9 @@ function M.ref_tree()
   }
   -- append_to_buffer(ref_tree_bufnr, vim.inspect(root))
 
-  visit_node(root, current_bufnr, ref_tree_bufnr)
+  visit_node(root, current_bufnr, ref_tree_bufnr, function()
+    -- tree fully built and appended
+  end)
 end
 
 vim.api.nvim_create_user_command('RefTree', function()
