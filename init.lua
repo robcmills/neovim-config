@@ -320,6 +320,10 @@ vim.api.nvim_create_user_command('Refs', function()
   vim.lsp.buf.references(nil, { on_list = on_list })
 end, {})
 
+vim.api.nvim_create_user_command('RefTree', function()
+  require('reftree').tree()
+end, {})
+
 
 local function trim(s)
   return (s:gsub("^%s*(.-)%s*$", "%1"))

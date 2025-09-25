@@ -1,0 +1,273 @@
+local M = {}
+
+local MAX_DEPTH = 5
+
+local function set_unique_buffer_name(bufnr, base_name)
+  local count = 1
+  local new_name = base_name
+  while true do
+    local success, err = pcall(vim.api.nvim_buf_set_name, bufnr, new_name)
+    if success then
+      break
+    end
+    if err and err:match("Failed to rename buffer") then
+      count = count + 1
+      new_name = base_name .. count
+    else
+      break
+    end
+  end
+end
+
+---@param bufnr number Buffer number
+---@param text string Text to append to buffer
+---Appends text to the end of the buffer. Does not create new lines unless text contains newlines.
+local function append_to_buffer(bufnr, text)
+  if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
+    print('append_to_buffer: buffer not valid')
+    return
+  end
+
+  if not vim.bo[bufnr].modifiable then
+    print('append_to_buffer: buffer not modifiable')
+    return
+  end
+
+  local line_count = vim.api.nvim_buf_line_count(bufnr)
+  local text_parts = vim.split(text, "\n")
+
+  if line_count == 0 then
+    -- Empty buffer, just set the text parts
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, text_parts)
+    return
+  end
+
+  -- Get only the last line
+  local last_line_idx = line_count - 1
+  local last_line = vim.api.nvim_buf_get_lines(bufnr, last_line_idx, last_line_idx + 1, false)[1] or ""
+
+  -- Handle the first part (append to current line)
+  if #text_parts > 0 then
+    vim.api.nvim_buf_set_lines(bufnr, last_line_idx, last_line_idx + 1, false, { last_line .. text_parts[1] })
+  end
+
+  -- Handle remaining parts (each becomes a new line)
+  if #text_parts > 1 then
+    local new_lines = {}
+    for i = 2, #text_parts do
+      table.insert(new_lines, text_parts[i])
+    end
+    vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, new_lines)
+  end
+end
+
+local function debug_node(node, bufnr)
+  local start_row, start_col, end_row, end_col = node:range()
+  local child_count = node:child_count()
+  local parent = node:parent()
+  local parent_type = parent and parent:type() or "no parent"
+
+  print("Node details:")
+  print(" Type:", node:type())
+  print(" Child count:", child_count)
+  print(" Parent type:", parent_type)
+
+  -- Optional: Print child types for more context (if child_count > 0)
+  if child_count > 0 then
+    print(" Child types:")
+    for i = 0, child_count - 1 do
+      local child = node:child(i)
+      print("    ", i, ":", child:type())
+    end
+  end
+
+  -- Print the line with column marker
+  local lines = vim.api.nvim_buf_get_lines(bufnr, start_row, start_row + 1, false)
+  local line = lines[1] or ""  -- Handle empty buffer
+  -- Mark target position with ^
+  print(line)
+  print(string.rep(" ", start_col) .. "^")
+end
+
+-- Given a position in a file:
+-- parse the file into an AST
+-- traverse up the AST to find the top-level node
+-- return its position
+local function get_top_level_position(file_path, row, col)
+  print("get_top_level_position: ", file_path)
+  print("get_top_level_position row:col: ", row, ":", col)
+  local content = vim.fn.readfile(file_path)
+  if vim.tbl_isempty(content) then
+    return nil
+  end
+
+  local bufnr = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, content)
+
+  -- Todo: get lang from file extension (support multiple languages)
+  local ok, parser = pcall(vim.treesitter.get_parser, bufnr, "tsx")
+  if not ok then
+    print("Failed to get parser for file:", file_path)
+    vim.api.nvim_buf_delete(bufnr, { force = true })
+    return nil
+  end
+
+  local tree = parser:parse()[1]
+  local root = tree:root()
+
+  local s_row, s_col = row - 1, col - 1
+  local node = root:named_descendant_for_range(s_row, s_col, s_row, s_col)
+  if not node then
+    print("No node found at position, falling back to line range")
+    -- Fallback to line range
+    node = root:named_descendant_for_range(s_row, 0, s_row, 10000)
+  end
+
+  if not node then
+    print("No node found")
+    vim.api.nvim_buf_delete(bufnr, { force = true })
+    return nil
+  end
+
+  -- skip imports
+  if node:parent() and node:parent():type() == "import_specifier" then
+    return nil
+  end
+
+  -- Traverse up to the top-level node (direct child of root)
+  local top_node = node:parent()
+  while top_node and top_node ~= root do
+    local parent = top_node:parent()
+    if not parent or parent:type() == "program" then break end
+    top_node = parent
+  end
+
+  if not top_node or top_node == root then
+    print("Failed to find top node")
+    vim.api.nvim_buf_delete(bufnr, { force = true })
+    return nil
+  end
+
+  -- debug_node(top_node, bufnr)
+
+  vim.api.nvim_buf_delete(bufnr, { force = true })
+
+  local start_row, start_col = top_node:range()
+  return { line = start_row, character = start_col }
+end
+
+local function format_path(path)
+  local prefix = "/Users/robcmills/src/openspace/web/icedemon/src/js/"
+  if string.sub(path, 1, #prefix) == prefix then
+    return string.sub(path, #prefix + 1)
+  else
+    return path
+  end
+end
+
+-- Function to add references recursively to a node (async via callback)
+local function visit_node(node, client_bufnr, ref_tree_bufnr)
+  local indent = string.rep("  ", node.depth)
+  append_to_buffer(ref_tree_bufnr, "\n" .. indent .. format_path(node.path))
+
+  local file_uri = vim.uri_from_fname(node.path)
+  local position = node.position
+  local params = {
+    textDocument = { uri = file_uri },
+    position = { line = position.line, character = position.col },
+    context = { includeDeclaration = false },
+  }
+  -- append_to_buffer(ref_tree_bufnr, "\nbuf_request params: " .. vim.inspect(params))
+
+  vim.lsp.buf_request(client_bufnr, "textDocument/references", params, function(err, result)
+    if err then
+      append_to_buffer(ref_tree_bufnr, "\nbuf_request err: " .. vim.inspect(err))
+      return
+    end
+    if not result then
+      append_to_buffer(ref_tree_bufnr, "\nbuf_request result nil")
+      return
+    end
+
+    append_to_buffer(ref_tree_bufnr, "\nbuf_request result: " .. vim.inspect(result))
+
+    for _, loc in ipairs(result) do
+      local ref_path = vim.uri_to_fname(loc.uri)
+      if ref_path ~= node.path then
+        local ref_row = loc.range.start.line + 1
+        local ref_col = loc.range.start.character + 1
+        local top_pos = get_top_level_position(ref_path, ref_row, ref_col)
+        if top_pos then
+          local child = {
+            children = {},
+            depth = node.depth + 1,
+            path = ref_path,
+            position = top_pos
+          }
+          table.insert(node.children, child)
+          if node.depth < MAX_DEPTH then
+            visit_node(child, client_bufnr, ref_tree_bufnr)
+          end
+        end
+      end
+    end
+  end)
+end
+
+-- Depth-first print tree with indentation
+local function print_tree(node, indent)
+  indent = indent or ""
+  print(indent .. node.path)
+
+  -- Sort children by path for consistent output
+  table.sort(node.children, function(a, b)
+    return a.path < b.path
+  end)
+
+  local child_indent = indent .. "  "
+  for _, child in ipairs(node.children) do
+    print_tree(child, child_indent)
+  end
+end
+
+local function create_ref_tree_buffer()
+  local bufnr = vim.api.nvim_create_buf(true, false)
+  -- vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  set_unique_buffer_name(bufnr, 'RefTree')
+  vim.api.nvim_set_current_buf(bufnr)
+  return bufnr
+end
+
+-- Main function to build and print the reference tree
+function M.ref_tree()
+  -- build root node on current buffer cursor position
+  local current_bufnr = vim.api.nvim_get_current_buf()
+  local current_path = vim.api.nvim_buf_get_name(current_bufnr)
+  local cursor = vim.api.nvim_win_get_cursor(0)
+
+  -- Create a new buffer for the ref tree. We'll stream the tree into it as we build.
+  local ref_tree_bufnr = create_ref_tree_buffer()
+
+  if not current_path or current_path == "" then
+    append_to_buffer(ref_tree_bufnr, "No file in current buffer")
+    return
+  end
+
+  local line = cursor[1] - 1
+  local col = cursor[2] - 1
+  local root = {
+    depth = 0,
+    path = current_path,
+    position = { line = line, col = col },
+    children = {},
+  }
+  -- append_to_buffer(ref_tree_bufnr, vim.inspect(root))
+
+  visit_node(root, current_bufnr, ref_tree_bufnr)
+end
+
+vim.api.nvim_create_user_command('RefTree', function()
+  M.ref_tree()
+end, {})
+
+return M
