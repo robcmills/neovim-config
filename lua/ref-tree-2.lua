@@ -92,8 +92,8 @@ end
 -- traverse up the AST to find the top-level node
 -- return its position
 local function get_top_level_position(file_path, row, col)
-  print("get_top_level_position: ", file_path)
-  print("get_top_level_position row:col: ", row, ":", col)
+  -- print("get_top_level_position: ", file_path)
+  -- print("get_top_level_position row:col: ", row, ":", col)
   local content = vim.fn.readfile(file_path)
   if vim.tbl_isempty(content) then
     return nil
@@ -146,12 +146,12 @@ local function get_top_level_position(file_path, row, col)
     return nil
   end
 
-  debug_node(top_node, bufnr)
+  -- debug_node(top_node, bufnr)
 
   vim.api.nvim_buf_delete(bufnr, { force = true })
 
   local start_row, start_col = top_node:range()
-  return { line = start_row, character = start_col }
+  return { line = start_row, col = start_col }
 end
 
 local function format_path(path)
@@ -163,10 +163,121 @@ local function format_path(path)
   end
 end
 
+local function print_buffer_info(bufnr)
+  -- Get buffer name
+  local name = vim.api.nvim_buf_get_name(bufnr)
+
+  -- Get filetype
+  local filetype = vim.bo[bufnr].filetype
+
+  -- Get first line (line 0 to 1, no strict index)
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, 1, false)
+  local first_line = lines[1] or ""
+
+  -- Print the info
+  print("Buffer Number: " .. bufnr)
+  print("Buffer Name: " .. name)
+  print("Filetype: " .. filetype)
+  print("First Line: " .. first_line)
+end
+
+local function create_temp_buffer(path)
+  local bufnr = vim.api.nvim_create_buf(false, true) -- listed=false, scratch=true
+  local content = vim.fn.readfile(path)
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, content)
+  vim.api.nvim_buf_set_name(bufnr, path)
+  local filetype = vim.filetype.match({filename = path}) or ""
+  vim.bo[bufnr].filetype = filetype
+  return bufnr
+end
+
+local function create_didopen_params(bufnr)
+  local name = vim.api.nvim_buf_get_name(bufnr)
+  if name == '' then
+    -- Handle unnamed buffers (optional: skip or use a dummy URI)
+    vim.notify('Buffer ' .. bufnr .. ' has no name; skipping didOpen', vim.log.levels.WARN)
+    return nil
+  end
+
+  local uri = vim.uri_from_bufnr(bufnr)
+
+  -- Get language ID from filetype (trim whitespace if needed)
+  local language_id = vim.bo[bufnr].filetype:gsub("^%s*(.-)%s*$", "%1")
+  if language_id == '' then
+    language_id = 'plaintext'  -- Fallback for unknown filetypes
+  end
+
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)  -- false: include \n on last line if present
+  local text = table.concat(lines, '\n')
+
+  local params = {
+    textDocument = {
+      uri = uri,
+      languageId = language_id,
+      version = 0,  -- Initial version; increment manually for future didChange if needed
+      text = text,
+    }
+  }
+
+  return params
+end
+
+local function register_buffer(temp_bufnr, client_bufnr)
+  local clients = vim.lsp.get_clients({ bufnr = client_bufnr })
+  if vim.tbl_isempty(clients) then
+    vim.notify("Failed to register_buffer: no clients attached to client_bufnr", vim.log.levels.WARN)
+    return false
+  end
+
+  -- Attach clients to the temp buffer (mimics LspAttach autocmd)
+  for _, client in ipairs(clients) do
+    if client.supports_method("textDocument/references") then
+      vim.lsp.buf_attach_client(temp_bufnr, client.id) -- Wait for 'initialized' if needed
+    end
+  end
+
+  -- Send textDocument/didOpen notification (triggers server to parse/load)
+  local open_params = create_didopen_params(temp_bufnr)
+  if open_params then
+    vim.lsp.buf_notify(temp_bufnr, "textDocument/didOpen", open_params)
+  else
+    vim.notify("Failed to create didOpen params for temp buffer", vim.log.levels.WARN)
+    return false
+  end
+
+  return true
+end
+
+local function unregister_buffer(bufnr, client_bufnr)
+  local close_params = vim.lsp.util.make_text_document_params(bufnr)
+  vim.lsp.buf_notify(bufnr, "textDocument/didClose", close_params)
+
+  local clients = vim.lsp.get_clients({ bufnr = client_bufnr })
+  for _, client in ipairs(clients) do
+    pcall(vim.lsp.buf_detach_client, bufnr, client.id)
+  end
+end
+
 -- Function to add references recursively to a node (async via callback)
 local function visit_node(node, client_bufnr, ref_tree_bufnr, on_done)
   local indent = string.rep("  ", node.depth)
   append_to_buffer(ref_tree_bufnr, "\n" .. indent .. format_path(node.path))
+
+  -- Load file content into temp buffer and register with LSP client
+  local temp_bufnr = -1
+  local existing_bufnr = vim.fn.bufnr(node.path)
+  if existing_bufnr < 0 then
+    temp_bufnr = create_temp_buffer(node.path)
+    -- print_buffer_info(temp_bufnr)
+    register_buffer(temp_bufnr, client_bufnr)
+  end
+
+  local function cleanup_temp_buf()
+    if temp_bufnr > 0 then
+      unregister_buffer(temp_bufnr, client_bufnr)
+      vim.api.nvim_buf_delete(temp_bufnr, { force = true })
+    end
+  end
 
   local file_uri = vim.uri_from_fname(node.path)
   local position = node.position
@@ -180,16 +291,19 @@ local function visit_node(node, client_bufnr, ref_tree_bufnr, on_done)
   vim.lsp.buf_request(client_bufnr, "textDocument/references", params, function(err, result)
     if err then
       append_to_buffer(ref_tree_bufnr, "\nbuf_request err: " .. vim.inspect(err))
+      cleanup_temp_buf()
       on_done()
       return
     end
     if not result then
       append_to_buffer(ref_tree_bufnr, "\nbuf_request result nil")
+      cleanup_temp_buf()
       on_done()
       return
     end
 
-    append_to_buffer(ref_tree_bufnr, "\nbuf_request result: " .. #result)
+    -- append_to_buffer(ref_tree_bufnr, "\nbuf_request result: " .. #result)
+    cleanup_temp_buf()
 
     -- Step 1: Synchronously build node.children from results (no recursion yet)
     for _, loc in ipairs(result) do
