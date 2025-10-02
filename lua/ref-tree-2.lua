@@ -87,6 +87,10 @@ local function debug_node(node, bufnr)
   print(string.rep(" ", start_col) .. "^" .. string.rep(" ", end_col - start_col - 1) .. "^")
 end
 
+local function wait(ms, callback)
+  vim.defer_fn(callback, ms)
+end
+
 -- Given a position in a file:
 -- parse the file into an AST
 -- traverse up the AST to find the top-level node
@@ -230,14 +234,20 @@ local function register_buffer(temp_bufnr, client_bufnr)
   -- Attach clients to the temp buffer (mimics LspAttach autocmd)
   for _, client in ipairs(clients) do
     if client.name == "ts_ls" and client.supports_method("textDocument/references") then
-      vim.lsp.buf_attach_client(temp_bufnr, client.id) -- Wait for 'initialized' if needed
+      local success = vim.lsp.buf_attach_client(temp_bufnr, client.id)
+      if not success then
+        vim.notify("Failed to attach " .. client.name .. " client to temp buffer", vim.log.levels.WARN)
+      end
     end
   end
 
   -- Send textDocument/didOpen notification (triggers server to parse/load)
   local open_params = create_didopen_params(temp_bufnr)
   if open_params then
-    vim.lsp.buf_notify(temp_bufnr, "textDocument/didOpen", open_params)
+    local success = vim.lsp.buf_notify(temp_bufnr, "textDocument/didOpen", open_params)
+    if not success then
+      vim.notify("Failed to notify lsp", vim.log.levels.WARN)
+    end
   else
     vim.notify("Failed to create didOpen params for temp buffer", vim.log.levels.WARN)
     return false
@@ -279,68 +289,77 @@ local function visit_node(node, client_bufnr, ref_tree_bufnr, on_done)
     end
   end
 
-  local file_uri = vim.uri_from_fname(node.path)
-  local position = node.position
-  local params = {
-    textDocument = { uri = file_uri },
-    position = { line = position.line, character = position.col },
-    context = { includeDeclaration = false },
-  }
-  -- append_to_buffer(ref_tree_bufnr, "\nbuf_request params: " .. vim.inspect(params))
+  local function get_references()
+    local file_uri = vim.uri_from_fname(node.path)
+    local position = node.position
+    local params = {
+      textDocument = { uri = file_uri },
+      position = { line = position.line, character = position.col },
+      context = { includeDeclaration = false },
+    }
+    -- append_to_buffer(ref_tree_bufnr, "\n" .. indent .. "buf_request params: " .. vim.inspect(params))
 
-  vim.lsp.buf_request(client_bufnr, "textDocument/references", params, function(err, result)
-    if err then
-      append_to_buffer(ref_tree_bufnr, "\nbuf_request err: " .. vim.inspect(err))
+    vim.lsp.buf_request(client_bufnr, "textDocument/references", params, function(err, result)
+      if err then
+        append_to_buffer(ref_tree_bufnr, "\nbuf_request err: " .. vim.inspect(err))
+        cleanup_temp_buf()
+        on_done()
+        return
+      end
+      if not result then
+        append_to_buffer(ref_tree_bufnr, "\nbuf_request result nil")
+        cleanup_temp_buf()
+        on_done()
+        return
+      end
+
+      append_to_buffer(ref_tree_bufnr, "\n" .. indent .. "buf_request result: " .. #result)
       cleanup_temp_buf()
-      on_done()
-      return
-    end
-    if not result then
-      append_to_buffer(ref_tree_bufnr, "\nbuf_request result nil")
-      cleanup_temp_buf()
-      on_done()
-      return
-    end
 
-    -- append_to_buffer(ref_tree_bufnr, "\nbuf_request result: " .. #result)
-    cleanup_temp_buf()
-
-    -- Step 1: Synchronously build node.children from results (no recursion yet)
-    for _, loc in ipairs(result) do
-      local ref_path = vim.uri_to_fname(loc.uri)
-      if ref_path ~= node.path then
-        local ref_row = loc.range.start.line + 1
-        local ref_col = loc.range.start.character + 1
-        local top_pos = get_top_level_position(ref_path, ref_row, ref_col)
-        if top_pos then
-          local child = {
-            children = {},
-            depth = node.depth + 1,
-            path = ref_path,
-            position = top_pos
-          }
-          table.insert(node.children, child)
+      -- Step 1: Synchronously build node.children from results (no recursion yet)
+      for _, loc in ipairs(result) do
+        local ref_path = vim.uri_to_fname(loc.uri)
+        if ref_path ~= node.path then
+          local ref_row = loc.range.start.line + 1
+          local ref_col = loc.range.start.character + 1
+          local top_pos = get_top_level_position(ref_path, ref_row, ref_col)
+          if top_pos then
+            local child = {
+              children = {},
+              depth = node.depth + 1,
+              path = ref_path,
+              position = top_pos
+            }
+            table.insert(node.children, child)
+          end
         end
       end
-    end
 
-    -- Step 2: If recursion allowed, process children sequentially (depth-first, no interleaving)
-    if node.depth < MAX_DEPTH then
-      local function process_next(idx)
-        if idx > #node.children then
-          on_done()  -- All siblings done
-          return
+      -- Step 2: If recursion allowed, process children sequentially (depth-first, no interleaving)
+      if node.depth < MAX_DEPTH then
+        local function process_next(idx)
+          if idx > #node.children then
+            on_done()  -- All siblings done
+            return
+          end
+          local child = node.children[idx]
+          visit_node(child, client_bufnr, ref_tree_bufnr, function()
+            process_next(idx + 1)  -- Proceed to next sibling only after this subtree is fully done
+          end)
         end
-        local child = node.children[idx]
-        visit_node(child, client_bufnr, ref_tree_bufnr, function()
-          process_next(idx + 1)  -- Proceed to next sibling only after this subtree is fully done
-        end)
+        process_next(1)
+      else
+        on_done()  -- No recursion; done with this node
       end
-      process_next(1)
-    else
-      on_done()  -- No recursion; done with this node
-    end
-  end)
+    end)
+  end
+
+  -- Delay after registering new buffer to allow LSP server to parse it
+  if temp_bufnr > 0 then
+    wait(2000, get_references)  -- delay for new buffers
+  else
+    get_references()  -- No delay for already-loaded buffers
+  end
 end
 
 -- Depth-first print tree with indentation
