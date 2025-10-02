@@ -92,8 +92,6 @@ end
 -- traverse up the AST to find the top-level node
 -- return its position
 local function get_top_level_position(file_path, row, col)
-  -- print("get_top_level_position: ", file_path)
-  -- print("get_top_level_position row:col: ", row, ":", col)
   local content = vim.fn.readfile(file_path)
   if vim.tbl_isempty(content) then
     return nil
@@ -116,13 +114,13 @@ local function get_top_level_position(file_path, row, col)
   local s_row, s_col = row - 1, col - 1
   local node = root:named_descendant_for_range(s_row, s_col, s_row, s_col)
   if not node then
-    print("No node found at position, falling back to line range")
+    print("No descendant node found at position, falling back to line range")
     -- Fallback to line range
     node = root:named_descendant_for_range(s_row, 0, s_row, 10000)
   end
 
   if not node then
-    print("No node found")
+    print("No descendant node found")
     vim.api.nvim_buf_delete(bufnr, { force = true })
     return nil
   end
@@ -231,7 +229,7 @@ local function register_buffer(temp_bufnr, client_bufnr)
 
   -- Attach clients to the temp buffer (mimics LspAttach autocmd)
   for _, client in ipairs(clients) do
-    if client.supports_method("textDocument/references") then
+    if client.name == "ts_ls" and client.supports_method("textDocument/references") then
       vim.lsp.buf_attach_client(temp_bufnr, client.id) -- Wait for 'initialized' if needed
     end
   end
@@ -254,7 +252,9 @@ local function unregister_buffer(bufnr, client_bufnr)
 
   local clients = vim.lsp.get_clients({ bufnr = client_bufnr })
   for _, client in ipairs(clients) do
-    pcall(vim.lsp.buf_detach_client, bufnr, client.id)
+    if client.name == "ts_ls" then
+      pcall(vim.lsp.buf_detach_client, bufnr, client.id)
+    end
   end
 end
 

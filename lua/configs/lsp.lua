@@ -193,9 +193,8 @@ lspconfig.ts_ls.setup {
   cmd = {
     'typescript-language-server',
     '--stdio',
-    -- '--logDirectory', '/Users/robcmills/.cache/nvim',
-    -- '--logVerbosity', 'verbose',
     -- '--log-level', '4',
+    -- '--logDirectory', '/Users/robcmills/.cache/nvim',
   },
   init_options = {
     preferences = {
