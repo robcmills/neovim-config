@@ -474,10 +474,6 @@ function M.ref_tree(max_depth)
   end)
 end
 
-vim.api.nvim_create_user_command('RefTree', function()
-  M.ref_tree()
-end, {})
-
 local function parse_depth_from_args(args)
   -- named arguments (depth=N)
   local named_args = {}
