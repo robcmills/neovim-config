@@ -325,7 +325,7 @@ local function unregister_buffer(bufnr, client_bufnr)
 end
 
 -- Function to add references recursively to a node (async via callback)
-local function visit_node(node, client_bufnr, ref_tree_bufnr, on_done)
+local function visit_node(node, client_bufnr, ref_tree_bufnr, max_depth, on_done)
   local indent = string.rep("  ", node.depth)
   append_to_buffer(ref_tree_bufnr, "\n" .. indent .. format_path(node.path))
 
@@ -397,14 +397,14 @@ local function visit_node(node, client_bufnr, ref_tree_bufnr, on_done)
       end
 
       -- Step 2: If recursion allowed, process children sequentially (depth-first, no interleaving)
-      if node.depth < MAX_DEPTH then
+      if node.depth < max_depth then
         local function process_next(idx)
           if idx > #node.children then
             on_done()  -- All siblings done
             return
           end
           local child = node.children[idx]
-          visit_node(child, client_bufnr, ref_tree_bufnr, function()
+          visit_node(child, client_bufnr, ref_tree_bufnr, max_depth, function()
             process_next(idx + 1)  -- Proceed to next sibling only after this subtree is fully done
           end)
         end
@@ -445,7 +445,7 @@ local function create_ref_tree_buffer()
 end
 
 -- Main function to build and print the reference tree
-function M.ref_tree()
+function M.ref_tree(max_depth)
   -- build root node on current buffer cursor position
   local current_bufnr = vim.api.nvim_get_current_buf()
   local current_path = vim.api.nvim_buf_get_name(current_bufnr)
@@ -469,7 +469,7 @@ function M.ref_tree()
   }
   -- append_to_buffer(ref_tree_bufnr, vim.inspect(root))
 
-  visit_node(root, current_bufnr, ref_tree_bufnr, function()
+  visit_node(root, current_bufnr, ref_tree_bufnr, max_depth, function()
     -- tree fully built and appended
   end)
 end
@@ -477,5 +477,36 @@ end
 vim.api.nvim_create_user_command('RefTree', function()
   M.ref_tree()
 end, {})
+
+local function parse_depth_from_args(args)
+  -- named arguments (depth=N)
+  local named_args = {}
+  for k, v in string.gmatch(args, "(%w+)=([%w%p]+)") do
+    named_args[k] = v
+  end
+  if named_args["depth"] then
+    local named_depth_number = tonumber(named_args["depth"])
+    if named_depth_number > 0 then
+      return named_depth_number
+    end
+  end
+  -- positional arguments (N)
+  local args_number = tonumber(args)
+  if args_number > 0 then
+    return args_number
+  end
+  return MAX_DEPTH
+end
+
+vim.api.nvim_create_user_command(
+  "RefTree",
+  function(opts)
+    local max_depth = parse_depth_from_args(opts.args)
+    M.ref_tree(max_depth)
+  end,
+  {
+    nargs = "*" -- allow zero or more arguments
+  }
+)
 
 return M
