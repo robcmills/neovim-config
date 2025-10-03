@@ -1,6 +1,6 @@
 local M = {}
 
-local MAX_DEPTH = 5
+local MAX_DEPTH = 6
 
 local function set_unique_buffer_name(bufnr, base_name)
   local count = 1
@@ -224,7 +224,7 @@ local function create_didopen_params(bufnr)
   return params
 end
 
-local function register_buffer(temp_bufnr, client_bufnr)
+local function register_buffer(register_bufnr, client_bufnr)
   local clients = vim.lsp.get_clients({ bufnr = client_bufnr })
   if vim.tbl_isempty(clients) then
     vim.notify("Failed to register_buffer: no clients attached to client_bufnr", vim.log.levels.WARN)
@@ -234,19 +234,21 @@ local function register_buffer(temp_bufnr, client_bufnr)
   -- Attach clients to the temp buffer (mimics LspAttach autocmd)
   for _, client in ipairs(clients) do
     if client.name == "ts_ls" and client.supports_method("textDocument/references") then
-      local success = vim.lsp.buf_attach_client(temp_bufnr, client.id)
+      local success = vim.lsp.buf_attach_client(register_bufnr, client.id)
       if not success then
         vim.notify("Failed to attach " .. client.name .. " client to temp buffer", vim.log.levels.WARN)
+        return false
       end
     end
   end
 
   -- Send textDocument/didOpen notification (triggers server to parse/load)
-  local open_params = create_didopen_params(temp_bufnr)
+  local open_params = create_didopen_params(register_bufnr)
   if open_params then
-    local success = vim.lsp.buf_notify(temp_bufnr, "textDocument/didOpen", open_params)
+    local success = vim.lsp.buf_notify(register_bufnr, "textDocument/didOpen", open_params)
     if not success then
       vim.notify("Failed to notify lsp", vim.log.levels.WARN)
+      return false
     end
   else
     vim.notify("Failed to create didOpen params for temp buffer", vim.log.levels.WARN)
@@ -273,17 +275,23 @@ local function visit_node(node, client_bufnr, ref_tree_bufnr, on_done)
   local indent = string.rep("  ", node.depth)
   append_to_buffer(ref_tree_bufnr, "\n" .. indent .. format_path(node.path))
 
-  -- Load file content into temp buffer and register with LSP client
+  -- Unless already open and listed,
+  -- load file content into temp buffer and register with LSP client
   local temp_bufnr = -1
   local existing_bufnr = vim.fn.bufnr(node.path)
+
+  if existing_bufnr > -1 and not vim.bo[existing_bufnr].buflisted then
+    temp_bufnr = create_temp_buffer(node.path)
+    register_buffer(temp_bufnr, client_bufnr)
+  end
+
   if existing_bufnr < 0 then
     temp_bufnr = create_temp_buffer(node.path)
-    -- print_buffer_info(temp_bufnr)
     register_buffer(temp_bufnr, client_bufnr)
   end
 
   local function cleanup_temp_buf()
-    if temp_bufnr > 0 then
+    if temp_bufnr > -1 then
       unregister_buffer(temp_bufnr, client_bufnr)
       vim.api.nvim_buf_delete(temp_bufnr, { force = true })
     end
@@ -297,9 +305,8 @@ local function visit_node(node, client_bufnr, ref_tree_bufnr, on_done)
       position = { line = position.line, character = position.col },
       context = { includeDeclaration = false },
     }
-    -- append_to_buffer(ref_tree_bufnr, "\n" .. indent .. "buf_request params: " .. vim.inspect(params))
 
-    vim.lsp.buf_request(client_bufnr, "textDocument/references", params, function(err, result)
+    local function request_handler(err, result)
       if err then
         append_to_buffer(ref_tree_bufnr, "\nbuf_request err: " .. vim.inspect(err))
         cleanup_temp_buf()
@@ -313,7 +320,7 @@ local function visit_node(node, client_bufnr, ref_tree_bufnr, on_done)
         return
       end
 
-      append_to_buffer(ref_tree_bufnr, "\n" .. indent .. "buf_request result: " .. #result)
+      -- append_to_buffer(ref_tree_bufnr, "\n" .. indent .. "buf_request result: " .. #result)
       cleanup_temp_buf()
 
       -- Step 1: Synchronously build node.children from results (no recursion yet)
@@ -351,15 +358,12 @@ local function visit_node(node, client_bufnr, ref_tree_bufnr, on_done)
       else
         on_done()  -- No recursion; done with this node
       end
-    end)
+    end
+
+    vim.lsp.buf_request(client_bufnr, "textDocument/references", params, request_handler)
   end
 
-  -- Delay after registering new buffer to allow LSP server to parse it
-  if temp_bufnr > 0 then
-    wait(2000, get_references)  -- delay for new buffers
-  else
-    get_references()  -- No delay for already-loaded buffers
-  end
+  get_references()
 end
 
 -- Depth-first print tree with indentation
