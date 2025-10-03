@@ -1,16 +1,15 @@
 local M = {}
 
-local MAX_DEPTH = 6
+local MAX_DEPTH = 32
 
 local function set_unique_buffer_name(bufnr, base_name)
   local count = 1
+  local max_count = 1000
   local new_name = base_name
-  while true do
+  while count < max_count do
     local success, err = pcall(vim.api.nvim_buf_set_name, bufnr, new_name)
-    if success then
-      break
-    end
-    if err and err:match("Failed to rename buffer") then
+    if success then break end
+    if err and (err:match("Failed to rename buffer") or err:match("Buffer with this name already exists")) then
       count = count + 1
       new_name = base_name .. count
     else
