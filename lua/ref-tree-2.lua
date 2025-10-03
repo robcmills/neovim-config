@@ -84,11 +84,53 @@ local function debug_node(node, bufnr)
   local lines = vim.api.nvim_buf_get_lines(bufnr, start_row, start_row + 1, false)
   local line = lines[1] or ""  -- Handle empty buffer
   print(line)
-  print(string.rep(" ", start_col) .. "^" .. string.rep(" ", end_col - start_col - 1) .. "^")
+  print(string.rep(" ", start_col) .. "^" .. string.rep(" ", end_col - start_col - 2) .. "^")
 end
 
 local function wait(ms, callback)
   vim.defer_fn(callback, ms)
+end
+
+---@param node TSNode A Treesitter node of type "lexical_declaration" or "function_declaration"
+---@return TSNode|nil identifier The identifier node, or nil if not found
+local function get_identifier_from_declaration(node)
+  local t = node:type()
+  if t == "lexical_declaration" then
+    -- lexical_declaration -> variable_declarator(s)
+    for child in node:iter_children() do
+      if child:type() == "variable_declarator" then
+        for gc in child:iter_children() do
+          if gc:type() == "identifier" then
+            return gc
+          end
+        end
+      end
+    end
+  elseif t == "function_declaration" then
+    for child in node:iter_children() do
+      if child:type() == "identifier" then
+        return child
+      end
+    end
+  end
+end
+
+---@param node TSNode A Treesitter node
+---@return TSNode|nil identifier The identifier node, or nil if not found
+local function get_export_identifier(node)
+  if not node or node:type() ~= "export_statement" then
+    return nil
+  end
+
+  -- The declaration is usually the first non-"export" keyword child
+  for child in node:iter_children() do
+    local t = child:type()
+    if t == "lexical_declaration" or t == "function_declaration" then
+      return get_identifier_from_declaration(child)
+    end
+  end
+
+  return nil
 end
 
 -- Given a position in a file:
@@ -104,11 +146,15 @@ local function get_top_level_position(file_path, row, col)
   local bufnr = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, content)
 
+  local function clean_up()
+    vim.api.nvim_buf_delete(bufnr, { force = true })
+  end
+
   -- Todo: get lang from file extension (support multiple languages)
   local ok, parser = pcall(vim.treesitter.get_parser, bufnr, "tsx")
   if not ok then
     print("Failed to get parser for file:", file_path)
-    vim.api.nvim_buf_delete(bufnr, { force = true })
+    clean_up()
     return nil
   end
 
@@ -125,12 +171,13 @@ local function get_top_level_position(file_path, row, col)
 
   if not node then
     print("No descendant node found")
-    vim.api.nvim_buf_delete(bufnr, { force = true })
+    clean_up()
     return nil
   end
 
   -- skip imports
   if node:parent() and node:parent():type() == "import_specifier" then
+    clean_up()
     return nil
   end
 
@@ -142,16 +189,24 @@ local function get_top_level_position(file_path, row, col)
     top_node = parent
   end
 
+  if top_node and top_node:type() == "export_statement" then
+    top_node = get_export_identifier(top_node)
+  end
+
   if not top_node or top_node == root then
     print("Failed to find top node")
-    vim.api.nvim_buf_delete(bufnr, { force = true })
+    clean_up()
+    return nil
+  end
+
+  if node:type() == "import_specifier" then
+    clean_up()
     return nil
   end
 
   -- debug_node(top_node, bufnr)
 
-  vim.api.nvim_buf_delete(bufnr, { force = true })
-
+  clean_up()
   local start_row, start_col = top_node:range()
   return { line = start_row, col = start_col }
 end
