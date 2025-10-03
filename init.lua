@@ -8,6 +8,7 @@ vim.opt.termguicolors = true
 require 'plugins'
 require 'configs.tokyonight'
 require 'colemak'
+require 'ref-tree'
 
 local function vim_opt_toggle(opt, on, off, name)
   local message = name
@@ -318,11 +319,6 @@ vim.api.nvim_create_user_command('Refs', function()
   end
   vim.lsp.buf.references(nil, { on_list = on_list })
 end, {})
-
-vim.api.nvim_create_user_command('RefTree', function()
-  require('reftree').tree()
-end, {})
-
 
 local function trim(s)
   return (s:gsub("^%s*(.-)%s*$", "%1"))
