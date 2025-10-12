@@ -94,7 +94,7 @@ telescope.load_extension('fzf')
 -- Examples
 -- :lua require('telescope.builtin').live_grep({ cwd = '.github' })
 -- :lua require('telescope.builtin').live_grep({ cwd = 'e2e' })
--- :lua require('telescope.builtin').live_grep({ cwd = 'src/js/projects/site/SheetsAlignmentTab' })
+-- :lua require('telescope.builtin').live_grep({ cwd = 'src/js/studio' })
 -- :lua require('telescope.builtin').live_grep({ cwd = '~/.local/share/nvim/prompt/history' })
 -- :lua require('telescope.builtin').live_grep({ glob_pattern = "!yarn.lock" })
 -- :lua require('telescope.builtin').live_grep({ glob_pattern = "!node_modules", hidden = false })

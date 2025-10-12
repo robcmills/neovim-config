@@ -2,10 +2,14 @@ local map = vim.keymap.set
 
 local remove_unused_imports = function(bufnr)
   local method = vim.lsp.protocol.Methods.textDocument_codeAction
-  local params = vim.lsp.util.make_range_params()
-  params.context = {
-    only = { "source.removeUnusedImports" },
-    triggerKind = 1
+  local range_params = vim.lsp.util.make_range_params(0, 'utf-8')
+  local params = {
+    textDocument = range_params.textDocument,
+    range = range_params.range,
+    context = {
+      only = { "source.removeUnusedImports" },
+      triggerKind = 1,
+    },
   }
   local timeout_ms = 1000
   local result = vim.lsp.buf_request_sync(bufnr, method, params, timeout_ms)
@@ -15,7 +19,7 @@ local remove_unused_imports = function(bufnr)
   for _, res in pairs(result) do
       for _, r in pairs(res.result or {}) do
           if r.edit then
-              vim.lsp.util.apply_workspace_edit(r.edit, "UTF-8")
+              vim.lsp.util.apply_workspace_edit(r.edit, 'utf-8')
           end
       end
   end
@@ -23,10 +27,14 @@ end
 
 local add_missing_imports = function(bufnr)
   local method = vim.lsp.protocol.Methods.textDocument_codeAction
-  local params = vim.lsp.util.make_range_params()
-  params.context = {
-    only = { "source.addMissingImports" },
-    triggerKind = 1
+  local range_params = vim.lsp.util.make_range_params(0, 'utf-8')
+  local params = {
+    textDocument = range_params.textDocument,
+    range = range_params.range,
+    context = {
+      only = { "source.addMissingImports" },
+      triggerKind = 1
+    }
   }
   local timeout_ms = 1000
   local result = vim.lsp.buf_request_sync(bufnr, method, params, timeout_ms)
@@ -36,7 +44,7 @@ local add_missing_imports = function(bufnr)
   for _, res in pairs(result) do
       for _, r in pairs(res.result or {}) do
           if r.edit then
-              vim.lsp.util.apply_workspace_edit(r.edit, "UTF-8")
+              vim.lsp.util.apply_workspace_edit(r.edit, 'utf-8')
           end
       end
   end
@@ -91,10 +99,10 @@ local on_attach = function(_, bufnr)
   end, { desc = "References of current symbol", buffer = bufnr })
 
   map("n", "[d", function()
-    vim.diagnostic.goto_prev()
+    vim.diagnostic.jump({count=-1, float=true})
   end, { desc = "Previous diagnostic", buffer = bufnr })
   map("n", "]d", function()
-    vim.diagnostic.goto_next()
+    vim.diagnostic.jump({count=1, float=true})
   end, { desc = "Next diagnostic", buffer = bufnr })
   map("n", "gl", function()
     vim.diagnostic.open_float()
@@ -110,25 +118,43 @@ local lsp_defaults = {
   on_attach = on_attach,
 }
 
-local lspconfig = require 'lspconfig'
-
-lspconfig.util.default_config = vim.tbl_deep_extend(
-  'force',
-  lspconfig.util.default_config,
-  lsp_defaults
-)
+vim.lsp.defaults = vim.tbl_deep_extend('force', vim.lsp.defaults or {}, lsp_defaults)
 
 -- setup servers
 
-lspconfig.eslint.setup {}
+vim.lsp.config('eslint', {})
+vim.lsp.enable('eslint')
 
-lspconfig.jsonls.setup {}
+vim.lsp.config('jsonls', {})
+vim.lsp.enable('jsonls')
 
-lspconfig.jedi_language_server.setup {}
+-- vim.lsp.config('jedi_language_server', {})
 
-lspconfig.sqlls.setup {}
+vim.lsp.config('sqlls', {})
+vim.lsp.enable('sqlls')
 
-lspconfig.lua_ls.setup {
+-- pico-8 lsp
+vim.filetype.add({
+  extension = {
+    p8 = 'p8',
+  },
+})
+
+local util = require 'lspconfig.util'
+
+vim.lsp.config('pico8_ls', {
+  cmd = { 'pico8-ls', '--stdio' },
+  filetypes = { 'p8' },
+  root_dir = function(fname)
+    local root = util.path.dirname(fname)
+    print('root', root)
+    return root
+  end,
+  settings = {},
+})
+vim.lsp.enable('pico8_ls')
+
+vim.lsp.config('lua_ls', {
   on_attach = function(client, bufnr)
     --    client.resolved_capabilities.document_formatting = false
     on_attach(client, bufnr)
@@ -163,7 +189,8 @@ lspconfig.lua_ls.setup {
       }
     },
   },
-}
+})
+vim.lsp.enable('lua_ls')
 
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "lua",
@@ -189,7 +216,7 @@ vim.api.nvim_create_autocmd("FileType", {
 
 -- vim.lsp.set_log_level("debug")
 
-lspconfig.ts_ls.setup {
+vim.lsp.config('ts_ls', {
   cmd = {
     'typescript-language-server',
     '--stdio',
@@ -202,7 +229,7 @@ lspconfig.ts_ls.setup {
       quotePreference = 'single',
     },
   },
-  root_dir = lspconfig.util.root_pattern("package.json"),
+  root_dir = util.root_pattern("package.json"),
   single_file_support = false,
   -- settings = {
   --   syntaxes = {
@@ -210,28 +237,27 @@ lspconfig.ts_ls.setup {
   --     "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage",
   --   },
   -- },
-}
+})
+vim.lsp.enable('ts_ls')
 
 -- deno config
 vim.g.markdown_fenced_languages = {
   "ts=typescript"
 }
-lspconfig.denols.setup {
+vim.lsp.config('denols', {
   on_attach = on_attach,
-  root_dir = lspconfig.util.root_pattern("deno.json", "deno.jsonc"),
-}
+  root_dir = util.root_pattern("deno.json", "deno.jsonc"),
+})
+vim.lsp.enable('denols')
 
 --Enable (broadcasting) snippet capability for completion
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 capabilities.textDocument.completion.completionItem.snippetSupport = true
 
-lspconfig.cssls.setup {
+vim.lsp.config('cssls', {
   capabilities = capabilities,
-}
-
--- lspconfig.tailwindcss.setup {}
-
--- lspconfig.kotlin_language_server.setup {}
+})
+vim.lsp.enable('cssls')
 
 
 -- diagnostics
@@ -260,6 +286,6 @@ vim.diagnostic.config {
   virtual_text = true,
 }
 
-vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
-vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = "rounded" })
+-- vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
+-- vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = "rounded" })
 

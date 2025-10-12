@@ -363,7 +363,7 @@ local function conflicts()
       vim.api.nvim_command('edit ' .. string.gsub(file, "web/icedemon/", ""))
     end
   else
-    vim.api.nvim_err_write("No Git merge conflicts found.\n")
+    vim.notify("No Git merge conflicts found.\n")
   end
 end
 
@@ -518,8 +518,8 @@ vim.api.nvim_create_user_command('Messages', function()
 end, { desc = 'Dump messages into a new buffer' })
 
 vim.api.nvim_create_user_command('Hover', function()
-  local params = vim.lsp.util.make_position_params()
-  vim.lsp.buf_request(0, 'textDocument/hover', params, function(err, result, ctx, config)
+  local params = vim.lsp.util.make_position_params(0, 'utf-8')
+  vim.lsp.buf_request(0, 'textDocument/hover', params, function(_, result)
     if result and result.contents then
       print(vim.inspect(result))
       local lines = vim.lsp.util.convert_input_to_markdown_lines(result.contents)
@@ -539,7 +539,6 @@ vim.keymap.set('n', '=', ':PromptSubmit<cr>', { desc = 'Submit prompt' })
 vim.api.nvim_create_user_command('Link', function()
   local line = vim.api.nvim_get_current_line()
   local col = vim.fn.virtcol('.') -- Get current column (1-indexed)
-  local char = vim.fn.strcharpart(line, col - 1, 1) -- Get char under cursor (0-indexed substring)
 
   -- Check if the character under the cursor is part of a URL
   -- This is a basic heuristic; a more robust solution might involve parsing

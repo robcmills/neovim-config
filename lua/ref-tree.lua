@@ -66,18 +66,18 @@ local function debug_node(node, bufnr)
   local parent = node:parent()
   local parent_type = parent and parent:type() or "no parent"
 
-  print("Node details:")
+  -- print("Node details:")
   print(" Type:", node:type())
-  print(" Child count:", child_count)
-  print(" Parent type:", parent_type)
+  -- print(" Child count:", child_count)
+  -- print(" Parent type:", parent_type)
 
-  if child_count > 0 then
-    print(" Child types:")
-    for i = 0, child_count - 1 do
-      local child = node:child(i)
-      print("    ", i, ":", child:type())
-    end
-  end
+  -- if child_count > 0 then
+  --   print(" Child types:")
+  --   for i = 0, child_count - 1 do
+  --     local child = node:child(i)
+  --     print("    ", i, ":", child:type())
+  --   end
+  -- end
 
   -- Print the line with column markers
   local lines = vim.api.nvim_buf_get_lines(bufnr, start_row, start_row + 1, false)
@@ -151,7 +151,7 @@ local function get_top_level_position(file_path, row, col)
 
   -- Todo: get lang from file extension (support multiple languages)
   local ok, parser = pcall(vim.treesitter.get_parser, bufnr, "tsx")
-  if not ok then
+  if not ok or not parser then
     print("Failed to get parser for file:", file_path)
     clean_up()
     return nil
@@ -188,25 +188,34 @@ local function get_top_level_position(file_path, row, col)
     top_node = parent
   end
 
-  if top_node and top_node:type() == "export_statement" then
-    top_node = get_export_identifier(top_node)
-  end
-
-  if not top_node or top_node == root then
+  if not top_node then
     print("Failed to find top node")
     clean_up()
     return nil
   end
 
-  if node:type() == "import_specifier" then
+  if top_node == root then
     clean_up()
     return nil
   end
 
-  -- debug_node(top_node, bufnr)
+  if top_node:type() ~= "export_statement" then
+    clean_up()
+    return nil
+  end
+
+  local identifier = get_export_identifier(top_node)
+
+  if not identifier then
+    print("Failed to get export identifier")
+    clean_up()
+    return nil
+  end
+
+  debug_node(identifier, bufnr)
 
   clean_up()
-  local start_row, start_col = top_node:range()
+  local start_row, start_col = identifier:range()
   return { line = start_row, col = start_col }
 end
 
@@ -475,6 +484,7 @@ function M.ref_tree(max_depth)
 end
 
 local function parse_depth_from_args(args)
+  if args == "" then return MAX_DEPTH end
   -- named arguments (depth=N)
   local named_args = {}
   for k, v in string.gmatch(args, "(%w+)=([%w%p]+)") do
