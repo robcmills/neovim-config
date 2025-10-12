@@ -142,16 +142,11 @@ vim.filetype.add({
 
 local util = require 'lspconfig.util'
 
-vim.lsp.config('pico8_ls', {
+vim.lsp.config.pico8_ls = {
   cmd = { 'pico8-ls', '--stdio' },
-  filetypes = { 'p8' },
-  root_dir = function(fname)
-    local root = util.path.dirname(fname)
-    print('root', root)
-    return root
-  end,
-  settings = {},
-})
+  filetypes = { 'pico8', 'p8' },
+  on_attach = on_attach,
+}
 vim.lsp.enable('pico8_ls')
 
 vim.lsp.config('lua_ls', {
