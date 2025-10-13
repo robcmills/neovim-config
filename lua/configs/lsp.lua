@@ -263,17 +263,7 @@ vim.lsp.enable('cssls')
 
 
 -- diagnostics
-local signs = {
-  { name = "DiagnosticSignError", text = "" },
-  { name = "DiagnosticSignWarn", text = "" },
-  { name = "DiagnosticSignHint", text = "" },
-  { name = "DiagnosticSignInfo", text = "" },
-}
-for _, sign in ipairs(signs) do
-  vim.fn.sign_define(sign.name, { texthl = sign.name, text = sign.text, numhl = "" })
-end
-
-vim.diagnostic.config {
+vim.diagnostic.config({
   float = {
     focusable = true,
     style = "minimal",
@@ -283,10 +273,24 @@ vim.diagnostic.config {
     prefix = "",
   },
   severity_sort = true,
-  signs = { active = signs },
+  signs = {
+    text = {
+      [vim.diagnostic.severity.ERROR] = "",
+      [vim.diagnostic.severity.WARN]  = "",
+      [vim.diagnostic.severity.HINT]  = "",
+      [vim.diagnostic.severity.INFO]  = "",
+    },
+    -- optional: set number highlighting
+    numhl = {
+      [vim.diagnostic.severity.ERROR] = "DiagnosticSignError",
+      [vim.diagnostic.severity.WARN]  = "DiagnosticSignWarn",
+      [vim.diagnostic.severity.HINT]  = "DiagnosticSignHint",
+      [vim.diagnostic.severity.INFO]  = "DiagnosticSignInfo",
+    },
+  },
   underline = true,
   virtual_text = true,
-}
+})
 
 -- vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
 -- vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = "rounded" })
