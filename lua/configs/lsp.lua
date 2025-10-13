@@ -211,7 +211,7 @@ vim.api.nvim_create_autocmd("FileType", {
 
 -- vim.lsp.set_log_level("debug")
 
-vim.lsp.config('ts_ls', {
+vim.lsp.config.ts_ls = {
   cmd = {
     'typescript-language-server',
     '--stdio',
@@ -232,8 +232,15 @@ vim.lsp.config('ts_ls', {
   --     "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage",
   --   },
   -- },
-})
+}
 vim.lsp.enable('ts_ls')
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = { 'typescript', 'typescriptreact', 'typescript.tsx' },
+  callback = function()
+    vim.lsp.start(vim.lsp.config.ts_ls)
+  end,
+})
+
 
 -- deno config
 vim.g.markdown_fenced_languages = {
