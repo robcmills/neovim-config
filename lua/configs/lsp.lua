@@ -136,7 +136,7 @@ vim.lsp.enable('sqlls')
 -- pico-8 lsp
 vim.filetype.add({
   extension = {
-    p8 = 'p8',
+    p8 = 'pico8',
   },
 })
 
