@@ -114,11 +114,12 @@ end
 ---@field config BuffersConfig Configuration options
 
 ---@class BuffersConfig
----@field width number|string Width of the buffers window (number or 'auto')
----@field min_width number|nil Minimum width when using auto width (default: 25)
----@field max_width number|nil Maximum width when using auto width (default: 40)
----@field side string Side of the screen to show buffers window ("left" or "right", default: "left")
----@field colors BuffersColors Color configuration
+---@field icons table|nil Config for nvim-web-devicons
+---@field width? number|string Width of the buffers window (number or 'auto')
+---@field min_width? number|nil Minimum width when using auto width (default: 25)
+---@field max_width? number|nil Maximum width when using auto width (default: 40)
+---@field side? string Side of the screen to show buffers window ("left" or "right", default: "left")
+---@field colors? BuffersColors Color configuration
 
 ---@class BuffersColors (see nvim_set_hl)
 ---@field error table Highlight definition for buffers with LSP errors
@@ -134,6 +135,7 @@ local state = {
   buffer_order = {}, -- Array of buffer numbers in order they were opened (modifiable by user)
   focus_order = {}, -- Array of buffer numbers in focus order (most recent first)
   config = {
+    icons = {},
     width = 'auto',
     min_width = 25, -- minimum width when using auto width (default: 25)
     max_width = 40, -- maximum width when using auto width (default: 50)
@@ -155,6 +157,10 @@ local function setup_highlights()
   vim.api.nvim_set_hl(0, "BuffersInactive", state.config.colors.inactive)
   vim.api.nvim_set_hl(0, "BuffersError", state.config.colors.error)
   vim.api.nvim_set_hl(0, "BuffersModified", state.config.colors.modified)
+end
+
+local function setup_icons()
+  require("nvim-web-devicons").setup(state.config.icons)
 end
 
 -- Get display name for buffer
@@ -268,7 +274,7 @@ local function calculate_auto_width()
   for _, bufnr in ipairs(buffers) do
     local name = get_buffer_name(bufnr, buffers)
     local letter = letter_map[bufnr]
-    local icon, _ = get_devicon(name)
+    local icon = get_devicon(name)
     -- Format: "letter icon name" + 1 margin column
     local icon_len = icon ~= "" and (string.len(icon) + 1) or 0
     local line_width = string.len(letter) + 1 + icon_len + string.len(name) + 1
@@ -345,7 +351,7 @@ local function render()
   for _, bufnr in ipairs(buffers) do
     local name = get_buffer_name(bufnr, buffers)
     local letter = letter_map[bufnr]
-    local icon, _ = get_devicon(name)
+    local icon = get_devicon(name)
     if icon ~= "" then
       table.insert(lines, string.format("%s %s %s", letter, icon, name))
     else
@@ -714,9 +720,14 @@ function M.setup(config)
     if config.max_width then
       state.config.max_width = config.max_width
     end
+    if config.icons then
+      state.config.icons = config.icons
+    end
   end
 
   setup_highlights()
+
+  setup_icons()
 
   -- Set up user commands
   vim.api.nvim_create_user_command("BuffersShow", function(args)

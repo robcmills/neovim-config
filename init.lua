@@ -500,13 +500,25 @@ vim.keymap.set('v', '<leader>u', ':lua<cr>', { desc = 'Execute selected lua' })
 -- vim.keymap.set('n', '<leader>u', ':.lua<cr>', { desc = 'Execute current line of lua' })
 vim.keymap.set('n', '<leader>u', ':luafile %<cr>', { desc = 'Execute current lua file' })
 
+
+-- vertical buffers
 package.loaded['buffers'] = nil
-require('buffers').setup()
+require('buffers').setup({
+  icons = {
+    default = true,
+    override = {
+      bash = { icon = "", color = "#31b53e", cterm_color = 34 },
+      cy = { icon = "" },
+      dev = { icon = "" },
+    },
+  }
+})
 
 vim.api.nvim_create_user_command('BuffersReset', function()
   package.loaded['buffers'] = nil
   require('buffers').setup()
 end, { desc = 'Reset Buffers plugin' })
+
 
 -- require('splash')
 
