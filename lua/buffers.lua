@@ -841,6 +841,16 @@ function M.setup(config)
     end
   })
 
+  -- Update when a buffer is renamed (e.g. :file newname)
+  vim.api.nvim_create_autocmd("BufFilePost", {
+    group = group,
+    callback = function()
+      if state.win and vim.api.nvim_win_is_valid(state.win) then
+        render()
+      end
+    end
+  })
+
   -- Track existing buffers
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.bo[bufnr].buflisted then
