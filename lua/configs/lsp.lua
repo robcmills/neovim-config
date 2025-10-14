@@ -57,7 +57,7 @@ end
 
 local on_attach = function(_, bufnr)
   map("n", "<leader>k", function()
-    vim.lsp.buf.hover()
+    vim.lsp.buf.hover({ border = "rounded" })
   end, { desc = "Hover symbol details", buffer = bufnr })
   map("n", "<leader>la", function()
     vim.lsp.buf.code_action()
@@ -113,35 +113,24 @@ local on_attach = function(_, bufnr)
   end, { desc = "Format file with LSP" })
 end
 
-local lsp_defaults = {
-  -- capabilities = require 'cmp_nvim_lsp'.default_capabilities(vim.lsp.protocol.make_client_capabilities()),
-  on_attach = on_attach,
-}
-
-vim.lsp.defaults = vim.tbl_deep_extend('force', vim.lsp.defaults or {}, lsp_defaults)
-
 -- setup servers
 
-vim.lsp.config('eslint', {})
+-- vim.lsp.config.eslint = {}
 vim.lsp.enable('eslint')
 
-vim.lsp.config('jsonls', {})
+-- vim.lsp.config.jsonls = {}
 vim.lsp.enable('jsonls')
 
--- vim.lsp.config('jedi_language_server', {})
-
-vim.lsp.config('sqlls', {})
+-- vim.lsp.config.sqlls = {}
 vim.lsp.enable('sqlls')
 
--- pico-8 lsp
+
+-- pico-8
 vim.filetype.add({
   extension = {
     p8 = 'pico8',
   },
 })
-
-local util = require 'lspconfig.util'
-
 vim.lsp.config.pico8_ls = {
   cmd = { 'pico8-ls', '--stdio' },
   filetypes = { 'pico8', 'p8' },
@@ -149,7 +138,9 @@ vim.lsp.config.pico8_ls = {
 }
 vim.lsp.enable('pico8_ls')
 
-vim.lsp.config('lua_ls', {
+
+-- lua
+vim.lsp.config.lua_ls = {
   on_attach = function(client, bufnr)
     --    client.resolved_capabilities.document_formatting = false
     on_attach(client, bufnr)
@@ -184,7 +175,7 @@ vim.lsp.config('lua_ls', {
       }
     },
   },
-})
+}
 vim.lsp.enable('lua_ls')
 
 vim.api.nvim_create_autocmd("FileType", {
@@ -209,56 +200,36 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- vim.lsp.set_log_level("debug")
-
 vim.lsp.config.ts_ls = {
-  cmd = {
-    'typescript-language-server',
-    '--stdio',
-    -- '--log-level', '4',
-    -- '--logDirectory', '/Users/robcmills/.cache/nvim',
-  },
   init_options = {
     preferences = {
       importModuleSpecifierPreference = 'non-relative',
       quotePreference = 'single',
     },
   },
-  root_dir = util.root_pattern("package.json"),
-  single_file_support = false,
-  -- settings = {
-  --   syntaxes = {
-  --     "Packages/TypeScript Syntax/TypeScript.tmLanguage",
-  --     "Packages/TypeScript Syntax/TypeScriptReact.tmLanguage",
-  --   },
-  -- },
+  on_attach = on_attach,
 }
 vim.lsp.enable('ts_ls')
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = { 'typescript', 'typescriptreact', 'typescript.tsx' },
-  callback = function()
-    vim.lsp.start(vim.lsp.config.ts_ls)
-  end,
-})
 
 
 -- deno config
-vim.g.markdown_fenced_languages = {
-  "ts=typescript"
-}
-vim.lsp.config('denols', {
-  on_attach = on_attach,
-  root_dir = util.root_pattern("deno.json", "deno.jsonc"),
-})
-vim.lsp.enable('denols')
+-- vim.g.markdown_fenced_languages = {
+--   "ts=typescript"
+-- }
+-- vim.lsp.config.denols = {
+--   on_attach = on_attach,
+--   root_dir = util.root_pattern("deno.json", "deno.jsonc")
+-- }
+-- vim.lsp.enable('denols')
+
 
 --Enable (broadcasting) snippet capability for completion
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 capabilities.textDocument.completion.completionItem.snippetSupport = true
 
-vim.lsp.config('cssls', {
-  capabilities = capabilities,
-})
+vim.lsp.config.cssls = {
+  capabilities = capabilities
+}
 vim.lsp.enable('cssls')
 
 
@@ -292,6 +263,6 @@ vim.diagnostic.config({
   virtual_text = true,
 })
 
+-- todo: migrate these
 -- vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
 -- vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = "rounded" })
-
