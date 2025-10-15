@@ -64,7 +64,13 @@ local on_attach = function(_, bufnr)
   end, { desc = "LSP code action", buffer = bufnr })
 
   map("n", "<leader>a", function()
-    vim.cmd('EslintFixAll')
+    vim.lsp.buf.code_action({
+      apply = true,
+      context = {
+        diagnostics = vim.lsp.diagnostic.get_line_diagnostics(),
+        only = { "source.fixAll" }
+      },
+    })
   end, { desc = "Fix all" })
 
   map("n", "<leader>li", function()
