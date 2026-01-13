@@ -149,6 +149,10 @@ return require('packer').startup {
         require('render-markdown').setup({
           file_types = { 'markdown' },
           sign = { enabled = false },
+          code = {
+            -- Whether to conceal nodes at the top and bottom of code blocks.
+            conceal_delimiters = false,
+          },
         })
       end,
     }

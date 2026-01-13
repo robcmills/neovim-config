@@ -240,9 +240,12 @@ end, { desc = "Search references" })
 vim.keymap.set("n", "<leader>m", function()
   require("telescope.builtin").symbols()
 end, { desc = "Symbols" })
-vim.keymap.set('n', 'gd', function()
+vim.keymap.set('n', '<leader>ld', function()
   require('telescope.builtin').lsp_definitions()
 end, { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>ls", function()
+  require("telescope.builtin").lsp_document_symbols()
+end, { desc = "LSP document symbols" })
 
 
 -- nvim-tree
@@ -577,3 +580,4 @@ vim.api.nvim_create_user_command('Link', function()
   vim.notify("No URL found under cursor or in the current line.", vim.log.levels.WARN)
 end, { desc = 'Open the URL under cursor in Brave browser' })
 
+vim.keymap.set('n', '<F5>', ':!love .<cr>', { desc = 'Run Love2d game' })
