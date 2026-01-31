@@ -130,6 +130,7 @@ vim.keymap.set('n', '<leader>t', function()
 end, { desc = 'Open a terminal buffer' })
 
 vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', { desc = 'Exit insert mode in terminal' })
+-- for use with agent tuis (e.g. claude code) that bind escape to essential commands
 vim.keymap.set('t', '<C-q>', '<Esc>', { desc = 'Send Esc to terminal' })
 
 vim.keymap.set('t', '<C-k>', function()
@@ -511,6 +512,7 @@ require('buffers').setup({
     default = true,
     override = {
       bash = { icon = "", color = "#31b53e", cterm_color = 34 },
+      claude = { icon = "*" },
       cy = { icon = "" },
       dev = { icon = "" },
     },
