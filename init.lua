@@ -515,6 +515,7 @@ require('buffers').setup({
       claude = { icon = "*" },
       cy = { icon = "" },
       dev = { icon = "" },
+      tsc = { icon = "" },
     },
   }
 })

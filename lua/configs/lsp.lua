@@ -130,6 +130,11 @@ vim.lsp.enable('jsonls')
 -- vim.lsp.config.sqlls = {}
 vim.lsp.enable('sqlls')
 
+vim.lsp.config.clangd = {
+  on_attach = on_attach,
+}
+vim.lsp.enable('clangd')
+
 
 -- pico-8
 vim.filetype.add({
