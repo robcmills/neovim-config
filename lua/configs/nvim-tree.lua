@@ -73,6 +73,13 @@ end
 
 
 require('nvim-tree').setup({
+  filesystem_watchers = {
+    ignore_dirs = {
+      "node_modules",
+      ".git",
+      "openapi/generated",
+    },
+  },
   git = {
     enable = false,
   },

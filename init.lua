@@ -31,6 +31,7 @@ vim.g.netrw_altv = 1
 vim.g.netrw_winsize = 25
 
 -- opt
+vim.opt.belloff = ""
 vim.opt.cursorline = true
 vim.opt.fillchars = {
   eob = " ", -- disable `~` on nonexistent lines
@@ -381,6 +382,11 @@ vim.keymap.set('n', '<leader>gd', function()
   vim.cmd('Git diff')
 end, { desc = 'Git diff' })
 
+local function is_merge_commit()
+  local merge_head = vim.fn.filereadable(vim.fn.FugitiveGitDir() .. '/MERGE_HEAD')
+  return merge_head == 1
+end
+
 vim.keymap.set('n', '<leader>gc', function()
   vim.cmd('BuffersHide')
   vim.cmd('vsplit')
@@ -389,6 +395,9 @@ vim.keymap.set('n', '<leader>gc', function()
   vim.api.nvim_command('wincmd w')
   local current_win = vim.api.nvim_get_current_win()
   vim.api.nvim_win_close(current_win, false)
+  if not is_merge_commit() then
+    vim.cmd('PromptCommitMessage')
+  end
 end, { desc = 'Git commit' })
 
 vim.keymap.set('n', '<leader>gp', function()
@@ -512,7 +521,7 @@ require('buffers').setup({
     default = true,
     override = {
       bash = { icon = "", color = "#31b53e", cterm_color = 34 },
-      claude = { icon = "*" },
+      claude = { icon = "✻" },
       cy = { icon = "" },
       dev = { icon = "" },
       tsc = { icon = "" },
@@ -552,7 +561,14 @@ end, { desc = 'Dump hover info into a new buffer' })
 
 -- prompt.nvim
 vim.keymap.set('n', '-', ':PromptNew<cr>', { desc = 'New prompt' })
-vim.keymap.set('n', '=', ':PromptSubmit<cr>', { desc = 'Submit prompt' })
+vim.keymap.set('n', '=', function()
+  -- vim.cmd('PromptRenameSummary')
+  vim.cmd('PromptSubmitClaudeCode')
+end, { desc = 'Submit to claude code' })
+
+vim.keymap.set('n', '<leader>gmv', function()
+  vim.cmd('Git merge development')
+end, { desc = 'Git merge development' })
 
 vim.api.nvim_create_user_command('Link', function()
   local line = vim.api.nvim_get_current_line()

@@ -4,7 +4,8 @@ Inspired by vertical tabs sidebars in some browsers (Arc, Brave).
 
 Current behaviors:
 
-Renders only filenames, unless the filename is index.* or duplicates exist, in which case it renders the name of the parent directory like so:
+Renders only filenames, unless the filename is index.* or duplicates exist,
+in which case it renders the name of the parent directory like so:
 ```
 fileA.ts
 fileB.ts
@@ -48,6 +49,7 @@ The code is written in lua.
 - bug: double letter shortcuts don't work because "ab" just jumps to "a" on first keypress
 - bug: shortcut lettering to a buffer should open in _last focused window_ (never in buffer list window)
 - bug: quickfind buffer appears in buffers list (never open in buffer list window)
+- bug: disallow opening any file in the buffers window (gets into bad state)
 - enhancement: enable arbitrary edits to buffers list and reconcile (oil.nvim)
 - enhancement: add config option to exclude letters from shortcuts (or fix delays)
   + e.g. the "g" shortcut always delays
@@ -59,7 +61,7 @@ The code is written in lua.
 - when a buffer is deleted, update cursor position in buffers window
 - bug: fix repeated calls to :BuffersMove* not working
 - handle filesystem changes (e.g. rm, mv, cp)
-- fix issues with saving/loading sessions
+- fix issues with saving/loading sessions (that include terminal buffers)
 - when deleting a buffer in nvim-tree, if deleted buffer is active, then its window is closed, causing the buffers window to become "full screen" and get into a bad state. Perhaps when selecting a buffer, make a check to see if the "last active" buffer has a window, and if not create one.
 
 ]]
@@ -81,6 +83,8 @@ require('buffers').setup({
   }
 })
 
+Colors values are _highlight definition maps_ (see nvim_set_hl):
+
 Usage:
 - :BuffersShow - Show buffer list using default position (left)
 - :BuffersShow left - Show buffer list on the left
@@ -90,7 +94,6 @@ Usage:
 - :BuffersShowRight - Show buffer list on the right
 - :BuffersShowFloat - Show buffer list in a floating window
 
-Colors values are highlight definition maps (see nvim_set_hl):
 ]]
 
 local M = {}
