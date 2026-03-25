@@ -867,6 +867,16 @@ function M.setup(config)
     end
   })
 
+  -- Update when a terminal is opened (buftype isn't set during BufAdd/BufEnter)
+  vim.api.nvim_create_autocmd("TermOpen", {
+    group = group,
+    callback = function()
+      if state.win and vim.api.nvim_win_is_valid(state.win) then
+        vim.defer_fn(render, 10)
+      end
+    end
+  })
+
   -- Update when a buffer is renamed (e.g. :file newname)
   vim.api.nvim_create_autocmd("BufFilePost", {
     group = group,
