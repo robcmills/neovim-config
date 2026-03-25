@@ -100,13 +100,22 @@ local M = {}
 
 local devicons_ok, devicons = pcall(require, "nvim-web-devicons")
 
-local function get_devicon(name)
+local state -- forward declaration; initialized below
+
+local function get_devicon(name, bufnr)
   -- Check icon overrides first (supports Lua patterns)
   if state.config.icons and state.config.icons.override then
     for key, entry in pairs(state.config.icons.override) do
       if name:match(key) then
         return entry.icon or "", entry.hl
       end
+    end
+  end
+  -- Check if buffer is a terminal (after overrides, so specific terminal names can have custom icons)
+  if bufnr and vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buftype == 'terminal' then
+    local terminal_config = state.config.icons and state.config.icons.terminal
+    if terminal_config then
+      return terminal_config.icon or "", terminal_config.hl
     end
   end
   -- Fall back to nvim-web-devicons
@@ -141,7 +150,7 @@ end
 ---@field inactive table Highlight definition for all other buffers
 
 ---@class BuffersState
-local state = {
+state = {
   win = nil,
   buf = nil,
   buffer_order = {}, -- Array of buffer numbers in order they were opened (modifiable by user)
@@ -286,7 +295,7 @@ local function calculate_auto_width()
   for _, bufnr in ipairs(buffers) do
     local name = get_buffer_name(bufnr, buffers)
     local letter = letter_map[bufnr]
-    local icon = get_devicon(name)
+    local icon = get_devicon(name, bufnr)
     -- Format: "letter icon name" + 1 margin column
     local icon_len = icon ~= "" and (string.len(icon) + 1) or 0
     local line_width = string.len(letter) + 1 + icon_len + string.len(name) + 1
@@ -363,7 +372,7 @@ local function render()
   for _, bufnr in ipairs(buffers) do
     local name = get_buffer_name(bufnr, buffers)
     local letter = letter_map[bufnr]
-    local icon = get_devicon(name)
+    local icon = get_devicon(name, bufnr)
     if icon ~= "" then
       table.insert(lines, string.format("%s %s %s", letter, icon, name))
     else
@@ -406,7 +415,7 @@ local function render()
     -- Calculate the start and end positions for the buffer name
     local name = get_buffer_name(bufnr, buffers)
     local letter = letter_map[bufnr]
-    local icon, icon_hl = get_devicon(name)
+    local icon, icon_hl = get_devicon(name, bufnr)
 
     local name_start
     if icon ~= "" then

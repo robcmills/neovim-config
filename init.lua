@@ -519,13 +519,10 @@ package.loaded['buffers'] = nil
 require('buffers').setup({
   icons = {
     default = true,
+    terminal = { icon = "" },
     override = {
-      bash = { icon = "", color = "#31b53e", cterm_color = 34 },
       claude = { icon = "✻" },
       ["^cc%-"] = { icon = "✻" },
-      cy = { icon = "" },
-      dev = { icon = "" },
-      tsc = { icon = "" },
     },
   }
 })
