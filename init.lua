@@ -523,6 +523,8 @@ require('buffers').setup({
     override = {
       claude = { icon = "✻" },
       ["^cc%-"] = { icon = "✻" },
+      cy = { icon = "󰙨", color = "#a3e7cb" },
+      git = { icon = "", color = "#F14E32" },
     },
   }
 })

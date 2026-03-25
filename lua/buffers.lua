@@ -107,7 +107,12 @@ local function get_devicon(name, bufnr)
   if state.config.icons and state.config.icons.override then
     for key, entry in pairs(state.config.icons.override) do
       if name:match(key) then
-        return entry.icon or "", entry.hl
+        local hl = entry.hl
+        if not hl and entry.color then
+          hl = "BuffersIcon_" .. key:gsub("[^%w]", "")
+          vim.api.nvim_set_hl(0, hl, { fg = entry.color })
+        end
+        return entry.icon or "", hl
       end
     end
   end

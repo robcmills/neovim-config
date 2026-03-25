@@ -130,3 +130,6 @@ telescope.load_extension('fzf')
 --     Default: require("telescope.sorters").get_fzy_sorter
 --
 --                                   *telescope.defaults.prefilter_sorter*
+--
+-- find nerd fonts symbols
+-- require("telescope.builtin").symbols({ sources = {"nerd-fonts"} })
