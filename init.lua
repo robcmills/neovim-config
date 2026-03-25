@@ -522,6 +522,7 @@ require('buffers').setup({
     override = {
       bash = { icon = "", color = "#31b53e", cterm_color = 34 },
       claude = { icon = "✻" },
+      ["^cc%-"] = { icon = "✻" },
       cy = { icon = "" },
       dev = { icon = "" },
       tsc = { icon = "" },

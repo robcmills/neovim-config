@@ -101,6 +101,15 @@ local M = {}
 local devicons_ok, devicons = pcall(require, "nvim-web-devicons")
 
 local function get_devicon(name)
+  -- Check icon overrides first (supports Lua patterns)
+  if state.config.icons and state.config.icons.override then
+    for key, entry in pairs(state.config.icons.override) do
+      if name:match(key) then
+        return entry.icon or "", entry.hl
+      end
+    end
+  end
+  -- Fall back to nvim-web-devicons
   if not devicons_ok then
     return "", nil
   end
