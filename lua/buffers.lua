@@ -80,7 +80,20 @@ require('buffers').setup({
     active = { link = "Normal" }, -- Most recently active buffer (a)
     previous = { link = "Title" }, -- Previously active buffer (b)
     inactive = { link = "Comment" }, -- All other buffers
-  }
+  },
+  -- Optional: format display names (may return newlines for wrapping)
+  format_file_name = function(filepath, display_name)
+    -- Example: wrap after ISO timestamp prefix (with optional "cc-" prefix)
+    local prefix, ts, rest = display_name:match("^(cc%-)(%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%-)(.*)")
+    if not ts then
+      prefix = ""
+      ts, rest = display_name:match("^(%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%-)(.*)")
+    end
+    if ts then
+      return prefix .. ts .. "\n" .. rest
+    end
+    return display_name
+  end,
 })
 
 Colors values are _highlight definition maps_ (see nvim_set_hl):
@@ -146,6 +159,7 @@ end
 ---@field max_width? number|nil Maximum width when using auto width (default: 40)
 ---@field side? string Side of the screen to show buffers window ("left" or "right", default: "left")
 ---@field colors? BuffersColors Color configuration
+---@field format_file_name? fun(filepath: string, display_name: string): string Optional function to format display names (may return newlines for wrapping)
 
 ---@class BuffersColors (see nvim_set_hl)
 ---@field error table Highlight definition for buffers with LSP errors
@@ -160,6 +174,7 @@ state = {
   buf = nil,
   buffer_order = {}, -- Array of buffer numbers in order they were opened (modifiable by user)
   focus_order = {}, -- Array of buffer numbers in focus order (most recent first)
+  buf_first_lines = {}, -- Maps bufnr to first display line number (set during render)
   config = {
     icons = {},
     width = 'auto',
@@ -301,10 +316,35 @@ local function calculate_auto_width()
     local name = get_buffer_name(bufnr, buffers)
     local letter = letter_map[bufnr]
     local icon = get_devicon(name, bufnr)
-    -- Format: "letter icon name" + 1 margin column
+
+    -- Apply format_file_name if configured
+    local display_name = name
+    if state.config.format_file_name then
+      local filepath = vim.api.nvim_buf_get_name(bufnr)
+      display_name = state.config.format_file_name(filepath, display_name)
+    end
+
+    local name_parts = vim.split(display_name, "\n", { plain = true })
+
+    -- First line: "letter icon name" + 1 margin column
     local icon_len = icon ~= "" and (string.len(icon) + 1) or 0
-    local line_width = string.len(letter) + 1 + icon_len + string.len(name) + 1
-    calculated_width = math.max(calculated_width, line_width)
+    local first_line_width = string.len(letter) + 1 + icon_len + string.len(name_parts[1]) + 1
+    calculated_width = math.max(calculated_width, first_line_width)
+
+    -- Continuation lines: indent + name_part + margin
+    if #name_parts > 1 then
+      local prefix
+      if icon ~= "" then
+        prefix = string.format("%s %s ", letter, icon)
+      else
+        prefix = string.format("%s ", letter)
+      end
+      local indent_width = vim.api.nvim_strwidth(prefix)
+      for i = 2, #name_parts do
+        local cont_width = indent_width + string.len(name_parts[i]) + 1
+        calculated_width = math.max(calculated_width, cont_width)
+      end
+    end
   end
 
   -- Apply max_width limit if configured
@@ -331,15 +371,9 @@ local function move_cursor_to_active_buffer()
   end
 
   local current_bufnr = vim.api.nvim_get_current_buf()
-  local buffers = get_ordered_buffers()
-
-  -- Find the line number for the current buffer
-  for line_idx, bufnr in ipairs(buffers) do
-    if bufnr == current_bufnr then
-      -- Set cursor to the line with the active buffer, column 0 (shortcut letter)
-      vim.api.nvim_win_set_cursor(state.win, {line_idx, 0})
-      break
-    end
+  local first_line = state.buf_first_lines[current_bufnr]
+  if first_line then
+    vim.api.nvim_win_set_cursor(state.win, {first_line, 0})
   end
 end
 
@@ -373,27 +407,71 @@ local function render()
 
   -- Render lines
   local lines = {}
+  -- Track line info per buffer entry
+  local buf_entries = {}
 
   for _, bufnr in ipairs(buffers) do
     local name = get_buffer_name(bufnr, buffers)
     local letter = letter_map[bufnr]
-    local icon = get_devicon(name, bufnr)
-    if icon ~= "" then
-      table.insert(lines, string.format("%s %s %s", letter, icon, name))
-    else
-      table.insert(lines, string.format("%s %s", letter, name))
+    local icon, icon_hl = get_devicon(name, bufnr)
+
+    -- Apply format_file_name if configured
+    local display_name = name
+    if state.config.format_file_name then
+      local filepath = vim.api.nvim_buf_get_name(bufnr)
+      display_name = state.config.format_file_name(filepath, display_name)
     end
+
+    local name_parts = vim.split(display_name, "\n", { plain = true })
+    local first_line = #lines + 1
+
+    -- First line: letter icon name
+    if icon ~= "" then
+      table.insert(lines, string.format("%s %s %s", letter, icon, name_parts[1]))
+    else
+      table.insert(lines, string.format("%s %s", letter, name_parts[1]))
+    end
+
+    -- Continuation lines: indented to align after letter+icon
+    if #name_parts > 1 then
+      local prefix
+      if icon ~= "" then
+        prefix = string.format("%s %s ", letter, icon)
+      else
+        prefix = string.format("%s ", letter)
+      end
+      local indent = string.rep(" ", vim.api.nvim_strwidth(prefix))
+      for i = 2, #name_parts do
+        table.insert(lines, indent .. name_parts[i])
+      end
+    end
+
+    table.insert(buf_entries, {
+      bufnr = bufnr,
+      first_line = first_line,
+      num_lines = #name_parts,
+      name = name,
+      letter = letter,
+      icon = icon,
+      icon_hl = icon_hl,
+    })
+  end
+
+  -- Store first-line mapping for cursor positioning
+  state.buf_first_lines = {}
+  for _, entry in ipairs(buf_entries) do
+    state.buf_first_lines[entry.bufnr] = entry.first_line
   end
 
   vim.bo[state.buf].modifiable = true
   vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
-  -- vim.bo[state.buf].modifiable = false
 
   -- Clear existing extmarks
   vim.api.nvim_buf_clear_namespace(state.buf, -1, 0, -1)
 
-  -- Highlight group
-  for line_idx, bufnr in ipairs(buffers) do
+  -- Highlight groups
+  for _, entry in ipairs(buf_entries) do
+    local bufnr = entry.bufnr
     local hl_group
     if has_diagnostic_errors(bufnr) then
       hl_group = "BuffersError"
@@ -417,11 +495,12 @@ local function render()
       end
     end
 
-    -- Calculate the start and end positions for the buffer name
-    local name = get_buffer_name(bufnr, buffers)
-    local letter = letter_map[bufnr]
-    local icon, icon_hl = get_devicon(name, bufnr)
+    local letter = entry.letter
+    local icon = entry.icon
+    local icon_hl = entry.icon_hl
+    local line_idx = entry.first_line
 
+    -- Highlight first line: icon + name
     local name_start
     if icon ~= "" then
       local icon_start = string.len(letter) + 1
@@ -438,14 +517,25 @@ local function render()
       name_start = string.len(letter) + 1
     end
 
-    local name_end = name_start + string.len(name)
-
-    -- Apply highlight to the buffer name only
     vim.api.nvim_buf_set_extmark(state.buf, vim.api.nvim_create_namespace("buffers_colors"),
       line_idx - 1, name_start, {
-        end_col = name_end,
+        end_col = string.len(lines[line_idx]),
         hl_group = hl_group
       })
+
+    -- Highlight continuation lines
+    for i = 2, entry.num_lines do
+      local cont_line_idx = entry.first_line + i - 1
+      local cont_line = lines[cont_line_idx]
+      local text_start = cont_line:find("%S")
+      if text_start then
+        vim.api.nvim_buf_set_extmark(state.buf, vim.api.nvim_create_namespace("buffers_colors"),
+          cont_line_idx - 1, text_start - 1, {
+            end_col = string.len(cont_line),
+            hl_group = hl_group
+          })
+      end
+    end
   end
 
   -- Store letter mapping for navigation
@@ -494,7 +584,20 @@ local function create_window(position)
   if position == "float" then
     -- Create floating window
     local width = get_effective_width()
-    local height = math.min(20, #get_ordered_buffers()) -- Limit height, add 2 for padding
+    -- Calculate display line count (accounts for multiline formatted names)
+    local display_lines = 0
+    local float_buffers = get_ordered_buffers()
+    for _, bufnr in ipairs(float_buffers) do
+      if state.config.format_file_name then
+        local name = get_buffer_name(bufnr, float_buffers)
+        local filepath = vim.api.nvim_buf_get_name(bufnr)
+        local display_name = state.config.format_file_name(filepath, name)
+        display_lines = display_lines + #vim.split(display_name, "\n", { plain = true })
+      else
+        display_lines = display_lines + 1
+      end
+    end
+    local height = math.min(20, display_lines)
 
     local ui = vim.api.nvim_list_uis()[1]
     local screen_width = ui.width
@@ -748,6 +851,9 @@ function M.setup(config)
     end
     if config.icons then
       state.config.icons = config.icons
+    end
+    if config.format_file_name then
+      state.config.format_file_name = config.format_file_name
     end
   end
 

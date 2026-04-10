@@ -92,6 +92,7 @@ telescope.load_extension('fzf')
 -- <C-q> Send all items not filtered to quickfixlist (qflist)
 
 -- Examples
+-- :lua require('telescope.builtin').live_grep({ cwd = '~/.claude/projects' })
 -- :lua require('telescope.builtin').live_grep({ cwd = '.github' })
 -- :lua require('telescope.builtin').live_grep({ cwd = 'e2e' })
 -- :lua require('telescope.builtin').live_grep({ cwd = 'src/js/studio' })

@@ -120,7 +120,7 @@ end
 vim.keymap.set('n', '!', toggle_boolean, { desc = 'Toggle Boolean' })
 
 -- terminal
-vim.opt.scrollback = 50000
+vim.opt.scrollback = 5000
 vim.o.shell = "bash -l" -- use "login" bash to source .bash_profile
 -- vim.o.shell = "/Applications/fish.app/Contents/Resources/base/usr/local/bin/fish"
 
@@ -517,12 +517,23 @@ vim.keymap.set('n', '<leader>u', ':luafile %<cr>', { desc = 'Execute current lua
 -- vertical buffers
 package.loaded['buffers'] = nil
 require('buffers').setup({
+  format_file_name = function(filepath, display_name)
+    local prefix, ts, rest = display_name:match("^(cc%-)(%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%-)(.*)")
+    if not ts then
+      prefix = ""
+      ts, rest = display_name:match("^(%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%-)(.*)")
+    end
+    if ts then
+      return prefix .. ts .. "\n" .. rest
+    end
+    return display_name
+  end,
   icons = {
     default = true,
     terminal = { icon = "" },
     override = {
-      claude = { icon = "✻" },
-      ["^cc%-"] = { icon = "✻" },
+      claude = { icon = "✻", color = "#E4A853" },
+      ["^cc%-"] = { icon = "✻", color = "#E4A853" },
       cy = { icon = "󰙨", color = "#a3e7cb" },
       git = { icon = "", color = "#F14E32" },
     },
