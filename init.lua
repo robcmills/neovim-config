@@ -613,3 +613,44 @@ vim.api.nvim_create_user_command('Link', function()
 end, { desc = 'Open the URL under cursor in Brave browser' })
 
 vim.keymap.set('n', '<F5>', ':!love .<cr>', { desc = 'Run Love2d game' })
+
+
+-- ============================================================================
+-- Startup
+-- ============================================================================
+-- Default workspace: terminal buffer named "git" + vertical buffers list
+
+vim.api.nvim_create_autocmd('VimEnter', {
+  group = vim.api.nvim_create_augroup('startup', { clear = true }),
+  callback = function()
+    -- Only run when no real file was opened
+    local buf_name = vim.api.nvim_buf_get_name(0)
+    if vim.fn.filereadable(buf_name) == 1 then
+      return
+    end
+    -- Replace the initial empty buffer with a terminal
+    local initial_buf = vim.api.nvim_get_current_buf()
+    vim.cmd('term')
+    vim.cmd('file git')
+    vim.api.nvim_buf_delete(initial_buf, { force = true })
+
+    -- Apply terminal options (TermOpen autocmd hasn't fired yet)
+    vim.opt_local.number = false
+    vim.opt_local.relativenumber = false
+    vim.opt_local.signcolumn = 'no'
+
+    -- Ensure the terminal buffer is listed for the buffers plugin
+    vim.bo.buflisted = true
+
+    -- Open vertical buffers list after events propagate
+    vim.schedule(function()
+      -- BufAdd doesn't fire during VimEnter, so manually notify the buffers plugin
+      local buf = vim.api.nvim_get_current_buf()
+      vim.api.nvim_exec_autocmds('BufAdd', { buffer = buf })
+
+      vim.cmd('BuffersShow')
+      vim.cmd('wincmd l')
+      vim.cmd('startinsert')
+    end)
+  end,
+})

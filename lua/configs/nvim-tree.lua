@@ -87,7 +87,8 @@ require('nvim-tree').setup({
     custom = { "node_modules" },
   },
   on_attach = on_attach,
-  hijack_unnamed_buffer_when_opening = true,
+  hijack_unnamed_buffer_when_opening = false,
+  hijack_directories = { enable = false },
   update_focused_file = { enable = true },
   renderer = {
     icons = {
