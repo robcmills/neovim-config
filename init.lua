@@ -141,6 +141,22 @@ vim.keymap.set('t', '<C-k>', function()
   vim.bo.scrollback = sb
 end, { desc = 'Clear terminal' })
 
+vim.api.nvim_create_user_command('Claude', function()
+  local base = 'claude'
+  local name = base
+  -- Find a unique name: claude, claude-1, claude-2, ...
+  local i = 1
+  while vim.fn.bufnr(name) ~= -1 do
+    name = base .. '-' .. i
+    i = i + 1
+  end
+  vim.cmd('term')
+  vim.cmd('file ' .. name)
+  local chan = vim.bo.channel
+  vim.fn.chansend(chan, 'clear && cc\n')
+  vim.cmd('startinsert')
+end, { desc = 'Open a terminal buffer named claude' })
+
 vim.api.nvim_create_autocmd("TermOpen", {
   group = vim.api.nvim_create_augroup("terminal", { clear = true }),
   callback = function()
