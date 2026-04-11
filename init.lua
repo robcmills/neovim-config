@@ -9,6 +9,7 @@ require 'plugins'
 require 'configs.tokyonight'
 require 'colemak'
 require 'ref-tree'
+require('claude-code-session-tree').setup()
 
 local function vim_opt_toggle(opt, on, off, name)
   local message = name
