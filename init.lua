@@ -127,7 +127,6 @@ vim.o.shell = "bash -l" -- use "login" bash to source .bash_profile
 
 vim.keymap.set('n', '<leader>t', function()
   vim.cmd('term')
-  vim.wait(1)
   vim.cmd('startinsert')
 end, { desc = 'Open a terminal buffer' })
 
