@@ -354,8 +354,6 @@ local function parse_jsonl(filepath)
               is_error = result and result.is_error or false,
             })
 
-          elseif block.type == 'thinking' then
-            table.insert(blocks, { type = 'thinking', text = block.thinking or '' })
           end
         end
 
@@ -389,6 +387,8 @@ local function render_turns(turns)
     table.insert(fold_levels, level)
   end
 
+  local prev_role = nil
+
   for _, turn in ipairs(turns) do
     if turn.role == 'user' then
       add('── User ──────────────────────────────────────', 0)
@@ -402,7 +402,9 @@ local function render_turns(turns)
       add('', 0)
 
     elseif turn.role == 'assistant' then
-      add('── Assistant ──────────────────────────────────', 0)
+      if prev_role ~= 'assistant' then
+        add('── Assistant ──────────────────────────────────', 0)
+      end
       for _, block in ipairs(turn.blocks) do
         if block.type == 'text' then
           for _, tl in ipairs(vim.split(block.text, '\n', { plain = true })) do
@@ -438,20 +440,12 @@ local function render_turns(turns)
           end
           add('', 0)
 
-        elseif block.type == 'thinking' then
-          add('  ▶ Thinking ···', '>2')
-          if block.text ~= '' then
-            for _, tl in ipairs(vim.split(block.text, '\n', { plain = true })) do
-              add('    ' .. tl, 2)
-            end
-          else
-            add('    (content not stored)', 2)
-          end
-          add('', 0)
         end
       end
       add('', 0)
     end
+
+    prev_role = turn.role
   end
 
   return lines, fold_levels
@@ -528,8 +522,6 @@ local function render_session(bufnr, jsonl_path)
       vim.api.nvim_buf_add_highlight(bufnr, ns, 'ClaudeSessionAssistant', i - 1, 0, -1)
     elseif line:match('^  ▶ Tool:') then
       vim.api.nvim_buf_add_highlight(bufnr, ns, 'ClaudeSessionTool', i - 1, 0, -1)
-    elseif line:match('^  ▶ Thinking') then
-      vim.api.nvim_buf_add_highlight(bufnr, ns, 'ClaudeSessionThinking', i - 1, 0, -1)
     elseif line:match('%[ERROR%]') then
       vim.api.nvim_buf_add_highlight(bufnr, ns, 'ClaudeSessionError', i - 1, 0, -1)
     end
@@ -575,6 +567,9 @@ local function open_session(session, jsonl_path)
   vim.wo.foldlevel = 1
   vim.wo.foldenable = true
   vim.wo.foldtext = ''
+  vim.wo.signcolumn = 'no'
+  vim.wo.relativenumber = false
+  vim.wo.foldcolumn = '0'
 
   -- Set filetype for syntax
   vim.bo[bufnr].filetype = 'markdown'
@@ -661,7 +656,6 @@ local function setup_highlights()
   hl_default('ClaudeSessionUser', { fg = '#7aa2f7', bold = true })
   hl_default('ClaudeSessionAssistant', { fg = '#9ece6a', bold = true })
   hl_default('ClaudeSessionTool', { fg = '#e0af68' })
-  hl_default('ClaudeSessionThinking', { fg = '#bb9af7', italic = true })
   hl_default('ClaudeSessionError', { fg = '#f7768e', bold = true })
 end
 
