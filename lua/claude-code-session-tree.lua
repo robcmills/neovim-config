@@ -6,12 +6,6 @@ local M = {}
 
 local claude_dir = vim.fn.expand('~/.claude')
 
--- Convert a cwd path to the project slug Claude Code uses
--- e.g. /Users/robcmills/.config -> -Users-robcmills--config
-local function cwd_to_slug(cwd)
-  return cwd:gsub('/', '-')
-end
-
 -- Read all session metadata files and return a list of session info tables
 local function read_session_metadata()
   local sessions_dir = claude_dir .. '/sessions'
@@ -32,7 +26,7 @@ end
 -- Check if a PID is alive
 local function pid_alive(pid)
   if not pid then return false end
-  local ok, err = pcall(vim.uv.kill, pid, 0)
+  local ok, err = pcall(vim.uv.kill, pid, 0) ---@diagnostic disable-line: undefined-field
   return ok and not err
 end
 
@@ -150,7 +144,7 @@ end
 local function format_session_label(session)
   local time_str = ''
   if session.startedAt then
-    time_str = os.date('%Y-%m-%d %H:%M', session.startedAt / 1000)
+    time_str = os.date('%Y-%m-%d %H:%M', session.startedAt / 1000) --[[@as string]]
   end
   local name = session.name or session.sessionId
   local status = pid_alive(session.pid) and '[active]' or '[ended]'
@@ -516,14 +510,21 @@ local function render_session(bufnr, jsonl_path)
   vim.api.nvim_buf_clear_namespace(bufnr, -1, 0, -1)
   local ns = vim.api.nvim_create_namespace('claude_session_tree')
   for i, line in ipairs(lines) do
+    local hl_group = nil
     if line:match('^── User ──') then
-      vim.api.nvim_buf_add_highlight(bufnr, ns, 'ClaudeSessionUser', i - 1, 0, -1)
+      hl_group = 'ClaudeSessionUser'
     elseif line:match('^── Assistant ──') then
-      vim.api.nvim_buf_add_highlight(bufnr, ns, 'ClaudeSessionAssistant', i - 1, 0, -1)
+      hl_group = 'ClaudeSessionAssistant'
     elseif line:match('^  ▶ Tool:') then
-      vim.api.nvim_buf_add_highlight(bufnr, ns, 'ClaudeSessionTool', i - 1, 0, -1)
+      hl_group = 'ClaudeSessionTool'
     elseif line:match('%[ERROR%]') then
-      vim.api.nvim_buf_add_highlight(bufnr, ns, 'ClaudeSessionError', i - 1, 0, -1)
+      hl_group = 'ClaudeSessionError'
+    end
+    if hl_group then
+      vim.api.nvim_buf_set_extmark(bufnr, ns, i - 1, 0, {
+        end_col = #line,
+        hl_group = hl_group,
+      })
     end
   end
 
@@ -595,7 +596,7 @@ function M._start_watcher(bufnr, jsonl_path)
     M._watchers[bufnr] = nil
   end
 
-  local watcher = vim.uv.new_fs_event()
+  local watcher = vim.uv.new_fs_event() ---@diagnostic disable-line: undefined-field
   if not watcher then return end
 
   local debounce_timer = nil
@@ -608,7 +609,7 @@ function M._start_watcher(bufnr, jsonl_path)
       debounce_timer:stop()
       debounce_timer:close()
     end
-    debounce_timer = vim.uv.new_timer()
+    debounce_timer = vim.uv.new_timer() ---@diagnostic disable-line: undefined-field
     debounce_timer:start(DEBOUNCE_MS, 0, function()
       debounce_timer:stop()
       debounce_timer:close()
