@@ -436,7 +436,10 @@ local function render_turns(turns)
 
         end
       end
-      add('', 0)
+      -- Avoid consecutive empty lines (tool_use blocks already add one)
+      if #lines == 0 or lines[#lines] ~= '' then
+        add('', 0)
+      end
     end
 
     prev_role = turn.role

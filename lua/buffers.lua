@@ -657,13 +657,32 @@ local function create_window(position)
             vim.api.nvim_set_current_buf(target_bufnr)
           else
             -- For split windows, find another window and switch to target buffer
+            -- Skip windows showing unlisted buffers (e.g. companion panes, NvimTree)
             local current_win = vim.api.nvim_get_current_win()
             local wins = vim.api.nvim_list_wins()
+            local target_win = nil
             for _, win in ipairs(wins) do
-              if win ~= current_win and vim.api.nvim_win_is_valid(win) then
-                vim.api.nvim_win_set_buf(win, target_bufnr)
-                vim.api.nvim_set_current_win(win)
+              if win ~= current_win and vim.api.nvim_win_is_valid(win)
+                 and vim.bo[vim.api.nvim_win_get_buf(win)].buflisted then
+                target_win = win
                 break
+              end
+            end
+            if target_win then
+              vim.api.nvim_win_set_buf(target_win, target_bufnr)
+              vim.api.nvim_set_current_win(target_win)
+            else
+              -- No suitable window found (main window was closed) — create a new split
+              -- Place new window opposite to the buffers list side
+              if position == "right" then
+                vim.cmd("leftabove vsplit")
+              else
+                vim.cmd("rightbelow vsplit")
+              end
+              vim.api.nvim_set_current_buf(target_bufnr)
+              -- Restore buffers window width
+              if state.win and vim.api.nvim_win_is_valid(state.win) then
+                vim.api.nvim_win_set_width(state.win, get_effective_width())
               end
             end
           end

@@ -595,6 +595,13 @@ vim.keymap.set('n', '=', function()
   end)
 end, { desc = 'Rename and submit to claude code' })
 
+-- cc.nvim
+vim.opt.runtimepath:prepend(vim.fn.expand('~/src/cc.nvim'))
+require('cc').setup()
+-- vim.keymap.set('n', '<leader>cc', ':CcToggle<cr>', { desc = 'Toggle cc.nvim' })
+-- vim.keymap.set('n', '<leader>cs', ':CcSend<cr>', { desc = 'Send cc.nvim prompt' })
+-- vim.keymap.set('n', '<leader>cx', ':CcStop<cr>', { desc = 'Stop cc.nvim generation' })
+
 vim.keymap.set('n', '<leader>gmv', function()
   vim.cmd('Git merge development')
 end, { desc = 'Git merge development' })
