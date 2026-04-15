@@ -157,12 +157,20 @@ vim.api.nvim_create_user_command('Claude', function()
   vim.cmd('startinsert')
 end, { desc = 'Open a terminal buffer named claude' })
 
+local terminal_augroup = vim.api.nvim_create_augroup("terminal", { clear = true })
 vim.api.nvim_create_autocmd("TermOpen", {
-  group = vim.api.nvim_create_augroup("terminal", { clear = true }),
+  group = terminal_augroup,
   callback = function()
     vim.opt_local.number = false
     vim.opt_local.relativenumber = false
     vim.opt_local.signcolumn = 'no'
+  end,
+})
+vim.api.nvim_create_autocmd("TermClose", {
+  group = terminal_augroup,
+  callback = function()
+    vim.opt_local.number = true
+    vim.opt_local.signcolumn = 'yes:1'
   end,
 })
 
@@ -200,6 +208,11 @@ end, { desc = "Close all buffers" })
 
 vim.keymap.set("n", "<leader>c", function()
   local bufnr = vim.api.nvim_get_current_buf()
+  local cc = package.loaded['cc']
+  if cc and cc.find_instance(bufnr) then
+    vim.cmd('CcClose')
+    return
+  end
   vim.cmd('bp')
   vim.api.nvim_buf_delete(bufnr, { force = true })
 end, { desc = "Close buffer" })
