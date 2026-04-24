@@ -46,6 +46,7 @@ The code is written in lua.
 
 ## TODO:
 
+- bug: accidentally trying to open a file or terminal when buffers list is focused results in a bad state
 - bug: double letter shortcuts don't work because "ab" just jumps to "a" on first keypress
 - bug: shortcut lettering to a buffer should open in _last focused window_ (never in buffer list window)
 - bug: quickfind buffer appears in buffers list (never open in buffer list window)
@@ -745,54 +746,100 @@ function M.hide()
   end
 end
 
-function M.next()
-  local buffers = get_ordered_buffers()
-  if #buffers <= 1 then
+-- Pick the buffer that next/prev should navigate relative to. If the current
+-- buffer is listed, use it. Otherwise (e.g. focused on buffers list or
+-- cc.nvim output), fall back to the most recently focused listed buffer.
+local function get_reference_buffer(buffers)
+  local current_bufnr = vim.api.nvim_get_current_buf()
+  for _, bufnr in ipairs(buffers) do
+    if bufnr == current_bufnr then
+      return current_bufnr
+    end
+  end
+  local listed_set = {}
+  for _, bufnr in ipairs(buffers) do
+    listed_set[bufnr] = true
+  end
+  for _, bufnr in ipairs(state.focus_order) do
+    if listed_set[bufnr] then
+      return bufnr
+    end
+  end
+  return buffers[1]
+end
+
+-- Switch to target_bufnr. If the current window holds a listed buffer, swap
+-- it there. Otherwise, find another window with a listed buffer and swap
+-- there; create a split if none exists.
+local function switch_to_buffer(target_bufnr)
+  local current_win = vim.api.nvim_get_current_win()
+  local current_buf = vim.api.nvim_win_get_buf(current_win)
+
+  if vim.bo[current_buf].buflisted then
+    vim.api.nvim_set_current_buf(target_bufnr)
     return
   end
 
-  local current_bufnr = vim.api.nvim_get_current_buf()
-  local current_index = nil
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if win ~= current_win and vim.api.nvim_win_is_valid(win)
+       and vim.bo[vim.api.nvim_win_get_buf(win)].buflisted then
+      vim.api.nvim_win_set_buf(win, target_bufnr)
+      vim.api.nvim_set_current_win(win)
+      return
+    end
+  end
 
-  -- Find current buffer index in buffer_order
+  if state.config.side == "right" then
+    vim.cmd("leftabove vsplit")
+  else
+    vim.cmd("rightbelow vsplit")
+  end
+  vim.api.nvim_set_current_buf(target_bufnr)
+  if state.win and vim.api.nvim_win_is_valid(state.win) then
+    vim.api.nvim_win_set_width(state.win, get_effective_width())
+  end
+end
+
+function M.next()
+  local buffers = get_ordered_buffers()
+  if #buffers == 0 then
+    return
+  end
+
+  local reference_bufnr = get_reference_buffer(buffers)
+  local current_index
   for i, bufnr in ipairs(buffers) do
-    if bufnr == current_bufnr then
+    if bufnr == reference_bufnr then
       current_index = i
       break
     end
   end
 
   if current_index then
-    -- Move to next buffer (wrap around to beginning)
     local next_index = (current_index % #buffers) + 1
-    local next_bufnr = buffers[next_index]
-    vim.api.nvim_set_current_buf(next_bufnr)
+    switch_to_buffer(buffers[next_index])
     render()
   end
 end
 
 function M.previous()
   local buffers = get_ordered_buffers()
-  if #buffers <= 1 then
+  if #buffers == 0 then
     return
   end
 
-  local current_bufnr = vim.api.nvim_get_current_buf()
-  local current_index = nil
-
-  -- Find current buffer index in buffer_order
+  local reference_bufnr = get_reference_buffer(buffers)
+  local current_index
   for i, bufnr in ipairs(buffers) do
-    if bufnr == current_bufnr then
+    if bufnr == reference_bufnr then
       current_index = i
       break
     end
   end
 
   if current_index then
-    -- Move to previous buffer (wrap around to end)
     local prev_index = current_index == 1 and #buffers or current_index - 1
-    local prev_bufnr = buffers[prev_index]
-    vim.api.nvim_set_current_buf(prev_bufnr)
+    switch_to_buffer(buffers[prev_index])
     render()
   end
 end
