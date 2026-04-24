@@ -151,7 +151,7 @@ return require('packer').startup {
           sign = { enabled = false },
           code = {
             -- Whether to conceal nodes at the top and bottom of code blocks.
-            conceal_delimiters = false,
+            conceal_delimiters = true,
           },
         })
       end,
