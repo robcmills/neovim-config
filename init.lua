@@ -600,6 +600,66 @@ vim.api.nvim_create_user_command('Messages', function()
   )
 end, { desc = 'Dump messages into a new buffer' })
 
+vim.api.nvim_create_user_command('Skills', function()
+  local pickers = require('telescope.pickers')
+  local finders = require('telescope.finders')
+  local conf = require('telescope.config').values
+  local actions = require('telescope.actions')
+  local action_state = require('telescope.actions.state')
+
+  local entries = {}
+
+  local skills_dir = vim.fn.expand('~/.claude/skills')
+  for _, dir in ipairs(vim.fn.glob(skills_dir .. '/*', false, true)) do
+    if vim.fn.isdirectory(dir) == 1 then
+      local skill_md = dir .. '/SKILL.md'
+      if vim.fn.filereadable(skill_md) == 1 then
+        local name = vim.fn.fnamemodify(dir, ':t')
+        table.insert(entries, {
+          display = 'skill   ' .. name,
+          path = skill_md,
+        })
+      end
+    end
+  end
+
+  local commands_dir = vim.fn.expand('~/.claude/commands')
+  for _, file in ipairs(vim.fn.glob(commands_dir .. '/*.md', false, true)) do
+    local name = vim.fn.fnamemodify(file, ':t:r')
+    table.insert(entries, {
+      display = 'command ' .. name,
+      path = file,
+    })
+  end
+
+  pickers.new({}, {
+    prompt_title = 'Claude Skills & Commands',
+    finder = finders.new_table({
+      results = entries,
+      entry_maker = function(entry)
+        return {
+          value = entry,
+          display = entry.display,
+          ordinal = entry.display,
+          path = entry.path,
+        }
+      end,
+    }),
+    sorter = conf.generic_sorter({}),
+    previewer = conf.file_previewer({}),
+    attach_mappings = function(prompt_bufnr)
+      actions.select_default:replace(function()
+        local selection = action_state.get_selected_entry()
+        actions.close(prompt_bufnr)
+        if selection then
+          vim.cmd('edit ' .. vim.fn.fnameescape(selection.path))
+        end
+      end)
+      return true
+    end,
+  }):find()
+end, { desc = 'Browse Claude Code skills and commands' })
+
 vim.api.nvim_create_user_command('Hover', function()
   local params = vim.lsp.util.make_position_params(0, 'utf-8')
   vim.lsp.buf_request(0, 'textDocument/hover', params, function(_, result)
