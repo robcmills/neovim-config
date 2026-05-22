@@ -138,6 +138,9 @@ return require('packer').startup {
       config = function()
         require('configs.maven')
       end,
+      run = function()
+        require('configs.supermaven_patch').apply()
+      end,
     }
 
     use {

@@ -11,6 +11,22 @@ require 'colemak'
 require 'ref-tree'
 require('claude-code-session-tree').setup()
 
+-- Sweep stale shada tmp files left over from ungraceful nvim exits, so the
+-- a..z suffix pool can't fill up and trigger E138 on the next quit.
+vim.api.nvim_create_autocmd('VimEnter', {
+  group = vim.api.nvim_create_augroup('shada_tmp_sweep', { clear = true }),
+  callback = function()
+    local dir = vim.fn.stdpath('state') .. '/shada'
+    local now = os.time()
+    for _, f in ipairs(vim.fn.glob(dir .. '/main.shada.tmp.*', false, true)) do
+      local st = vim.uv.fs_stat(f)
+      if st and now - st.mtime.sec > 60 then
+        pcall(os.remove, f)
+      end
+    end
+  end,
+})
+
 local function vim_opt_toggle(opt, on, off, name)
   local message = name
   if vim.opt[opt]:get() == off then
@@ -612,6 +628,7 @@ end, { desc = 'Rename and submit to claude code' })
 vim.opt.runtimepath:prepend(vim.fn.expand('~/src/cc.nvim'))
 require('cc').setup({
   extra_args = { '--chrome' },
+  prompt_placeholder = 'Enter prompt...',
 })
 -- vim.keymap.set('n', '<leader>cc', ':CcToggle<cr>', { desc = 'Toggle cc.nvim' })
 -- vim.keymap.set('n', '<leader>cs', ':CcSend<cr>', { desc = 'Send cc.nvim prompt' })
