@@ -71,7 +71,29 @@ local on_attach = function(_, bufnr)
         only = { "source.fixAll" }
       },
     })
-  end, { desc = "Fix all" })
+
+    -- Prettier was extracted from the ESLint pipeline (RAD-10744), so the
+    -- eslint fixAll above no longer formats. Run prettier --write directly.
+    -- Deferred so the async fixAll edits land before we write to disk.
+    local file = vim.api.nvim_buf_get_name(0)
+    if file == "" then return end
+    vim.defer_fn(function()
+      vim.cmd("silent! write")
+      vim.system(
+        { "pnpm", "exec", "prettier", "--write", file },
+        { cwd = vim.fn.fnamemodify(file, ":h") },
+        function(obj)
+          vim.schedule(function()
+            if obj.code == 0 then
+              vim.cmd("silent! checktime")
+            else
+              vim.notify("prettier failed: " .. (obj.stderr or ""), vim.log.levels.WARN)
+            end
+          end)
+        end
+      )
+    end, 150)
+  end, { desc = "Fix all (eslint) + prettier" })
 
   map("n", "<leader>li", function()
     add_missing_imports(bufnr)

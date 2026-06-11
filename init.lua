@@ -677,12 +677,13 @@ end, { desc = 'Dump hover info into a new buffer' })
 
 -- prompt.nvim
 vim.keymap.set('n', '-', ':PromptNew<cr>', { desc = 'New prompt' })
-vim.keymap.set('n', '=', function()
-  local bufnr = vim.api.nvim_get_current_buf()
-  require('prompt.core').rename_prompt_summary(bufnr, nil, function()
-    vim.cmd('PromptSubmitClaudeCode')
-  end)
-end, { desc = 'Rename and submit to claude code' })
+vim.keymap.set('n', '=', ':CcNew<cr>', { desc = 'New cc.nvim chat' })
+-- vim.keymap.set('n', '=', function()
+--   local bufnr = vim.api.nvim_get_current_buf()
+--   require('prompt.core').rename_prompt_summary(bufnr, nil, function()
+--     vim.cmd('PromptSubmitClaudeCode')
+--   end)
+-- end, { desc = 'Rename and submit to claude code' })
 
 -- cc.nvim
 vim.opt.runtimepath:prepend(vim.fn.expand('~/src/cc.nvim'))
