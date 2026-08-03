@@ -688,8 +688,19 @@ vim.keymap.set('n', '=', ':CcNew<cr>', { desc = 'New cc.nvim chat' })
 -- cc.nvim
 vim.opt.runtimepath:prepend(vim.fn.expand('~/src/cc.nvim'))
 require('cc').setup({
-  extra_args = { '--chrome' },
+  history_max_records = 1000,
   prompt_placeholder = 'Enter prompt...',
+  provider = 'codex', -- 'claude' | 'codex'
+  providers = {
+    claude = {
+      cmd = 'cc',
+    },
+    codex = {
+      approval_policy = 'never',
+      effort = 'high',   -- 'low' | 'medium' | 'high' | 'xhigh'
+      sandbox = 'danger-full-access',
+    },
+  },
 })
 -- vim.keymap.set('n', '<leader>cc', ':CcToggle<cr>', { desc = 'Toggle cc.nvim' })
 -- vim.keymap.set('n', '<leader>cs', ':CcSend<cr>', { desc = 'Send cc.nvim prompt' })
