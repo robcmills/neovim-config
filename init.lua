@@ -689,6 +689,43 @@ vim.keymap.set('n', '=', ':CcNew<cr>', { desc = 'New cc.nvim chat' })
 vim.opt.runtimepath:prepend(vim.fn.expand('~/src/cc.nvim'))
 require('cc').setup({
   history_max_records = 1000,
+  on_permission_prompt = function(event)
+    local tmux_window = 'unknown'
+    if vim.env.TMUX_PANE and vim.fn.executable('tmux') == 1 then
+      local value = vim.fn.system({
+        'tmux', 'display-message', '-p',
+        '-t', vim.env.TMUX_PANE,
+        '#{window_index}:#{window_name}',
+      })
+      if vim.v.shell_error == 0 then
+        value = vim.trim(value)
+        if value ~= '' then tmux_window = value end
+      end
+    end
+
+    local session = event.output_bufname
+      or event.session_name
+      or event.session_id
+      or 'unknown'
+    local message = table.concat({
+      'tmux window: ' .. tmux_window,
+      'session: ' .. session,
+      'permission: ' .. event.tool_name,
+    }, '\n')
+
+    if vim.fn.executable('osascript') == 1 then
+      vim.system({
+        'osascript',
+        '-e', [[on run argv
+          display notification (item 1 of argv) with title (item 2 of argv)
+        end run]],
+        message,
+        'cc.nvim permission requested',
+      })
+    else
+      vim.notify(message, vim.log.levels.WARN, { title = 'cc.nvim permission requested' })
+    end
+  end,
   prompt_placeholder = 'Enter prompt...',
   provider = 'codex', -- 'claude' | 'codex'
   providers = {
