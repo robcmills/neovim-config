@@ -18,17 +18,19 @@ a fileA.ts
 b fileB.ts
 c ParenDir/index.ts
 ```
-When the buffers window is focused, pressing one of the letters should open the corresponding buffer.
+When the buffers window is focused, pressing one of the letters opens the corresponding buffer.
 The shortcut letters ascend alphabetically based on the order in which the buffers were focused.
 
-It renders buffers top to bottom in the order they were opened by default, but it is modifiable by the user to manually reorder them, and any changes made persist.
+Buffers are rendered top to bottom in the order they were opened by default,
+and the order is modifiable by the user to manually reorder them.
 
 Buffer names are colored based on their focus order:
 - Most recently active buffer (a): white (configurable)
 - Previously active buffer (b): soft (configurable)
 - All other buffers: gray (configurable)
 
-Buffers window width is configurable to either a fixed width or auto.
+Buffers window width is configurable to either a fixed width or auto,
+with min and max width configurable settings.
 
 The window can be displayed in three positions:
 - "left": Vertical split on the left side (default)
@@ -41,26 +43,23 @@ It exposes methods to:
 - re-order the buffers
 
 The code is as simple and minimal as possible.
-The code is written in lua.
 
 
 ## TODO:
 
-- bug: accidentally trying to open a file or terminal when buffers list is focused results in a bad state
-- bug: double letter shortcuts don't work because "ab" just jumps to "a" on first keypress
-- bug: shortcut lettering to a buffer should open in _last focused window_ (never in buffer list window)
-- bug: quickfind buffer appears in buffers list (never open in buffer list window)
 - bug: disallow opening any file in the buffers window (gets into bad state)
-- enhancement: enable arbitrary edits to buffers list and reconcile (oil.nvim)
+- bug: solve shortcuts when length of buffers list is greater than available keys
+    i.e double letter shortcuts don't work because "ab" just jumps to "a" on first keypress
+- enhancement: enable arbitrary edits to buffers list and reconcile (oil.nvim) ?
 - enhancement: add config option to exclude letters from shortcuts (or fix delays)
-  + e.g. the "g" shortcut always delays
+  + e.g. the "g" shortcut always delays because it is the first letter of "sequence keybindings"
   + debug why q shortcut doesn't work
 - enhancement: add config option to exclude filenames and filetypes
-- enhancement: enable mouse clicking on buffer name to open it (gross)
-- add debug log to file
+- enhancement: enable mouse support (i.e. clicking on buffer name to open it) (gross)
+- add debug mode config option (logs to a file)
 - add option to show buffers list in a floating window (even if sidebar is open)
 - when a buffer is deleted, update cursor position in buffers window
-- bug: fix repeated calls to :BuffersMove* not working
+- bug: fix repeated calls to :BuffersMove* not working (update internal order state when buffers are closed/deleted)
 - handle filesystem changes (e.g. rm, mv, cp)
 - fix issues with saving/loading sessions (that include terminal buffers)
 - when deleting a buffer in nvim-tree, if deleted buffer is active, then its window is closed, causing the buffers window to become "full screen" and get into a bad state. Perhaps when selecting a buffer, make a check to see if the "last active" buffer has a window, and if not create one.

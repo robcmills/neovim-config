@@ -727,13 +727,17 @@ require('cc').setup({
     end
   end,
   prompt_placeholder = 'Enter prompt...',
-  provider = 'codex', -- 'claude' | 'codex'
+  provider = 'claude', -- 'claude' | 'codex'
   providers = {
     claude = {
+      auto_rename_model = 'haiku',
       cmd = 'cc',
+      effort = 'high', -- 'low' | 'medium' | 'high' | 'xhigh' | 'max' | 'auto'
+      model = 'fable',
     },
     codex = {
       approval_policy = 'never',
+      auto_rename_model = 'gpt-5.6-luna',
       effort = 'high',   -- 'low' | 'medium' | 'high' | 'xhigh'
       sandbox = 'danger-full-access',
     },
