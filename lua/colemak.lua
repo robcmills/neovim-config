@@ -11,9 +11,9 @@
 -- end, { desc = "New buffer" })
 
 
-vim.keymap.set("n", "n", "j", { desc = "Down (j)" })
+vim.keymap.set("n", "n", "gj", { desc = "Down (j)" })
 vim.keymap.set("n", "j", "n")
-vim.keymap.set("n", "e", "k", { desc = "Up (k)" })
+vim.keymap.set("n", "e", "gk", { desc = "Up (k)" })
 vim.keymap.set("n", "k", "e")
 vim.keymap.set("n", "i", "l", { desc = "Right (l)" })
 vim.keymap.set("n", "l", "i")
