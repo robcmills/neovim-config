@@ -491,11 +491,6 @@ vim.api.nvim_create_autocmd('TextYankPost', {
 -- nvim-pvg
 -- vim.keymap.set('n', '<leader>v', ':lua require("nvim-pvg").search()<cr>', { desc = 'pvg' })
 
--- copilot
-vim.keymap.set("i", "<C-l>", function()
-  vim.cmd("Copilot panel")
-end, { desc = "Copilot Panel" })
-
 -- sessions
 
 -- save session

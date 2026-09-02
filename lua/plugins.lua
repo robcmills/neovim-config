@@ -130,19 +130,6 @@ return require('packer').startup {
     use 'kristijanhusak/vim-dadbod-completion'
     use 'kristijanhusak/vim-dadbod-ui'
 
-    -- disabled while I try supermaven
-    -- use 'github/copilot.vim'
-
-    use {
-      'supermaven-inc/supermaven-nvim',
-      config = function()
-        require('configs.maven')
-      end,
-      run = function()
-        require('configs.supermaven_patch').apply()
-      end,
-    }
-
     use {
       'MeanderingProgrammer/render-markdown.nvim',
       ft = { 'markdown' },
