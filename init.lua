@@ -136,6 +136,26 @@ end
 
 vim.keymap.set('n', '!', toggle_boolean, { desc = 'Toggle Boolean' })
 
+local function open_url_in_brave()
+  local line = vim.api.nvim_get_current_line()
+  local col = vim.fn.col('.')
+  local pattern = [=[\vhttps?://[^[:space:]<>"'`)\]]+]=]
+  local start = 0
+  while true do
+    local match, s, e = unpack(vim.fn.matchstrpos(line, pattern, start))
+    if s == -1 then break end
+    if col > s and col <= e then
+      local url = match:gsub('[.,;:]+$', '')
+      vim.fn.jobstart({ 'open', '-a', 'Brave Browser', url }, { detach = true })
+      return
+    end
+    start = e
+  end
+  vim.notify('No url under cursor', vim.log.levels.WARN)
+end
+
+vim.keymap.set('n', 'gu', open_url_in_brave, { desc = 'Open url under cursor in Brave' })
+
 -- terminal
 vim.opt.scrollback = 5000
 vim.o.shell = "bash -l" -- use "login" bash to source .bash_profile
