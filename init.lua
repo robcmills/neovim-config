@@ -691,7 +691,8 @@ vim.keymap.set('n', '=', ':CcNew<cr>', { desc = 'New cc.nvim chat' })
 -- end, { desc = 'Rename and submit to claude code' })
 
 -- cc.nvim
-vim.opt.runtimepath:prepend(vim.fn.expand('~/src/cc.nvim'))
+-- g:cc_nvim_path points a fresh Neovim at a cc.nvim worktree for testing.
+vim.opt.runtimepath:prepend(vim.fn.expand(vim.g.cc_nvim_path or '~/src/cc.nvim'))
 require('cc').setup({
   history_max_records = 1000,
   limits_log = '~/.claude/codex-offload/limits.jsonl',
@@ -732,6 +733,25 @@ require('cc').setup({
       vim.notify(message, vim.log.levels.WARN, { title = 'cc.nvim permission requested' })
     end
   end,
+  -- Unanswered prompts: after 2 minutes, Remote Control forwards the prompt
+  -- to the Claude phone app as a push; 15 minutes later it is denied so the
+  -- agent moves on. Override for testing: nvim --cmd 'let g:cc_permission_timeouts = [10, 20]'
+  permission_timeouts = {
+    {
+      after = (vim.g.cc_permission_timeouts or {})[1] or 120,
+      callback = function(event) event.enable_remote() end,
+    },
+    {
+      after = (vim.g.cc_permission_timeouts or {})[2] or 900,
+      callback = function(event)
+        event.resolve('deny', 'Approval timeout. Attempt to work around safely, else continue other work and report this denial.')
+      end,
+    },
+  },
+  -- Turn Remote Control back off so the next prompt gets the 2-minute grace.
+  on_permission_resolved = function(event)
+    if event.remote_enabled_by_stage then event.disable_remote() end
+  end,
   prompt_placeholder = 'Enter prompt...',
   provider = 'claude', -- 'claude' | 'codex'
   providers = {
@@ -739,7 +759,7 @@ require('cc').setup({
       auto_rename_model = 'haiku',
       cmd = 'cc',
       effort = 'high', -- 'low' | 'medium' | 'high' | 'xhigh' | 'max' | 'auto'
-      model = 'fable',
+      model = 'opus', -- TODO: back to 'fable' once Brayden lifts the Fable spend limit
       permission_mode = 'bypassPermissions',
     },
     codex = {
