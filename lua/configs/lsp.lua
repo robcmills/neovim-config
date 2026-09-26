@@ -137,7 +137,7 @@ local on_attach = function(_, bufnr)
   end, { desc = "Hover diagnostics", buffer = bufnr })
 
   vim.api.nvim_buf_create_user_command(bufnr, "Format", function()
-    vim.lsp.buf.formatting_sync()
+    vim.lsp.buf.format()
   end, { desc = "Format file with LSP" })
 end
 

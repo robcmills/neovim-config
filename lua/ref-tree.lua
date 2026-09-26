@@ -296,7 +296,7 @@ local function register_buffer(register_bufnr, client_bufnr)
 
   -- Attach clients to the temp buffer (mimics LspAttach autocmd)
   for _, client in ipairs(clients) do
-    if client.name == "ts_ls" and client.supports_method("textDocument/references") then
+    if client.name == "ts_ls" and client:supports_method("textDocument/references") then
       local success = vim.lsp.buf_attach_client(register_bufnr, client.id)
       if not success then
         vim.notify("Failed to attach " .. client.name .. " client to temp buffer", vim.log.levels.WARN)

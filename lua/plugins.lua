@@ -7,6 +7,7 @@ return require('packer').startup {
 
     use {
       'nvim-treesitter/nvim-treesitter',
+      branch = 'master',
       run = ':TSUpdate',
       event = { 'BufRead', 'BufNewFile' },
       cmd = {
