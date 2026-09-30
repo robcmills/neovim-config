@@ -5,21 +5,11 @@ return require('packer').startup {
     -- colorscheme
     use 'folke/tokyonight.nvim'
 
+    -- `main` does not support lazy loading.
     use {
       'nvim-treesitter/nvim-treesitter',
-      branch = 'master',
+      branch = 'main',
       run = ':TSUpdate',
-      event = { 'BufRead', 'BufNewFile' },
-      cmd = {
-        'TSInstall',
-        'TSInstallInfo',
-        'TSInstallSync',
-        'TSUninstall',
-        'TSUpdate',
-        'TSUpdateSync',
-        'TSDisableAll',
-        'TSEnableAll',
-      },
       config = function()
         require 'configs.treesitter'
       end,
@@ -53,7 +43,7 @@ return require('packer').startup {
 
     use {
       'nvim-telescope/telescope.nvim',
-      tag = '0.1.8',
+      tag = 'v0.2.2',
       requires = { { 'nvim-lua/plenary.nvim' } },
       cmd = 'Telescope',
       module = 'telescope',
@@ -134,7 +124,6 @@ return require('packer').startup {
     use {
       'MeanderingProgrammer/render-markdown.nvim',
       ft = { 'markdown' },
-      after = { 'nvim-treesitter' },
       requires = { 'nvim-tree/nvim-web-devicons', opt = true },
       config = function()
         require('render-markdown').setup({
