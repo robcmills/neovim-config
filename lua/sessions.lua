@@ -132,36 +132,84 @@ function M.restore(snap)
   vim.notify(string.format('Session restored: %d files, %d cc sessions', files, resumed))
 end
 
+-- Newest first by file creation time (birthtime on macOS), falling back to
+-- mtime where the filesystem does not report one.
+local function created_at(path)
+  local stat = vim.uv.fs_stat(path)
+  if not stat then return 0 end
+  local t = stat.birthtime and stat.birthtime.sec or 0
+  return t > 0 and t or stat.mtime.sec
+end
+
 local function list_sessions()
   local entries = {}
   for _, path in ipairs(vim.fn.glob(SESSIONS_DIR .. '*.lua', false, true)) do
-    table.insert(entries, { label = vim.fn.fnamemodify(path, ':t:r'), path = path })
+    table.insert(entries, { name = vim.fn.fnamemodify(path, ':t:r'), label = vim.fn.fnamemodify(path, ':t:r'), path = path })
   end
   for _, path in ipairs(vim.fn.glob(SESSIONS_DIR .. '*.vim', false, true)) do
-    table.insert(entries, { label = vim.fn.fnamemodify(path, ':t:r') .. ' (mksession)', path = path })
+    table.insert(entries, { name = vim.fn.fnamemodify(path, ':t:r'), label = vim.fn.fnamemodify(path, ':t:r') .. ' (mksession)', path = path })
   end
+  for _, e in ipairs(entries) do e.created_at = created_at(e.path) end
+  table.sort(entries, function(a, b) return a.created_at > b.created_at end)
   return entries
 end
 
+local function complete_sessions(arg_lead)
+  local names = {}
+  for _, e in ipairs(list_sessions()) do
+    if vim.startswith(e.name, arg_lead) then table.insert(names, e.name) end
+  end
+  return names
+end
+
+local function load(entry)
+  vim.cmd.source(vim.fn.fnameescape(entry.path))
+end
+
 function M.setup()
-  vim.api.nvim_create_user_command('SaveSession', function()
+  -- :SaveSession [name] saves under name, or prompts for one.
+  vim.api.nvim_create_user_command('SaveSession', function(opts)
+    if opts.args ~= '' then return M.save(opts.args) end
     vim.ui.input({ prompt = 'Session name: ' }, function(input)
       if input and input ~= '' then M.save(input) end
     end)
-  end, {})
+  end, { nargs = '?', complete = complete_sessions })
 
-  vim.api.nvim_create_user_command('LoadSession', function()
+  -- :LoadSession [name] loads that session, or picks one (newest first).
+  vim.api.nvim_create_user_command('LoadSession', function(opts)
     local entries = list_sessions()
     if #entries == 0 then
       vim.notify('No sessions found')
+      return
+    end
+    if opts.args ~= '' then
+      for _, e in ipairs(entries) do
+        if e.name == opts.args then return load(e) end
+      end
+      vim.notify('No session named ' .. opts.args, vim.log.levels.WARN)
       return
     end
     vim.ui.select(entries, {
       prompt = 'Select session: ',
       format_item = function(e) return e.label end,
     }, function(choice)
-      if choice then vim.cmd.source(vim.fn.fnameescape(choice.path)) end
+      if choice then load(choice) end
     end)
+  end, { nargs = '?', complete = complete_sessions })
+
+  -- :SaveSessionNow saves a session named by the current date and time.
+  vim.api.nvim_create_user_command('SaveSessionNow', function()
+    vim.cmd.SaveSession(os.date('%Y-%m-%d_%H-%M-%S'))
+  end, {})
+
+  -- :LoadSessionLatest loads the most recently created session.
+  vim.api.nvim_create_user_command('LoadSessionLatest', function()
+    local latest = list_sessions()[1]
+    if not latest then
+      vim.notify('No sessions found')
+      return
+    end
+    vim.cmd.LoadSession(latest.name)
   end, {})
 end
 
