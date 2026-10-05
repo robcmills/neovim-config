@@ -210,7 +210,7 @@ end
 local AGENT_STATUS_ICONS = {
   waiting = "✋",
   interrupting = "🛑",
-  working = "🔨",
+  working = "🚧",
   monitoring = "📡",
   unread = "📬",
   starting = "🌱",
