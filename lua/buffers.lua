@@ -106,6 +106,8 @@ Usage:
 - :BuffersShowLeft - Show buffer list on the left
 - :BuffersShowRight - Show buffer list on the right
 - :BuffersShowFloat - Show buffer list in a floating window
+- :BuffersMarkUnread - Mark the cc.nvim agent under the cursor (or the current
+  buffer) unread until next viewed; `U` in the buffers window does the same
 
 ]]
 
@@ -202,6 +204,42 @@ end
 
 local function setup_icons()
   require("nvim-web-devicons").setup(state.config.icons)
+end
+
+-- Status emoji for cc.nvim agent buffers, keyed by cc.nvim instance state
+local AGENT_STATUS_ICONS = {
+  waiting = "✋",
+  interrupting = "🛑",
+  working = "🔨",
+  monitoring = "📡",
+  unread = "📬",
+  starting = "🌱",
+  ready = "🟢",
+  exited = "💀",
+}
+
+-- Map bufnr -> cc.nvim instance state for every agent output and prompt buffer
+local function get_agent_states()
+  local cc = package.loaded["cc"]
+  if not cc or not cc.list_instances then
+    return {}
+  end
+  local ok, instances = pcall(cc.list_instances)
+  if not ok then
+    return {}
+  end
+  local states = {}
+  for _, inst in ipairs(instances) do
+    states[inst.outputBufnr] = inst.state
+    states[inst.promptBufnr] = inst.state
+  end
+  return states
+end
+
+-- Status prefix ("✋ ") for agent buffers, "" for everything else
+local function get_status_prefix(bufnr, agent_states)
+  local icon = AGENT_STATUS_ICONS[agent_states[bufnr]]
+  return icon and (icon .. " ") or ""
 end
 
 -- Get display name for buffer
@@ -311,6 +349,8 @@ local function calculate_auto_width()
     letter_map[bufnr] = get_letter(i)
   end
 
+  local agent_states = get_agent_states()
+
   -- Calculate width for each buffer line
   for _, bufnr in ipairs(buffers) do
     local name = get_buffer_name(bufnr, buffers)
@@ -325,10 +365,11 @@ local function calculate_auto_width()
     end
 
     local name_parts = vim.split(display_name, "\n", { plain = true })
+    name_parts[1] = get_status_prefix(bufnr, agent_states) .. name_parts[1]
 
     -- First line: "letter icon name" + 1 margin column
     local icon_len = icon ~= "" and (string.len(icon) + 1) or 0
-    local first_line_width = string.len(letter) + 1 + icon_len + string.len(name_parts[1]) + 1
+    local first_line_width = string.len(letter) + 1 + icon_len + vim.api.nvim_strwidth(name_parts[1]) + 1
     calculated_width = math.max(calculated_width, first_line_width)
 
     -- Continuation lines: indent + name_part + margin
@@ -410,6 +451,8 @@ local function render()
   -- Track line info per buffer entry
   local buf_entries = {}
 
+  local agent_states = get_agent_states()
+
   for _, bufnr in ipairs(buffers) do
     local name = get_buffer_name(bufnr, buffers)
     local letter = letter_map[bufnr]
@@ -423,6 +466,7 @@ local function render()
     end
 
     local name_parts = vim.split(display_name, "\n", { plain = true })
+    name_parts[1] = get_status_prefix(bufnr, agent_states) .. name_parts[1]
     local first_line = #lines + 1
 
     -- First line: letter icon name
@@ -457,10 +501,15 @@ local function render()
     })
   end
 
-  -- Store first-line mapping for cursor positioning
+  -- Store first-line mapping for cursor positioning, and the reverse
+  -- (every display line, including continuations) for cursor lookups
   state.buf_first_lines = {}
+  state.line_bufs = {}
   for _, entry in ipairs(buf_entries) do
     state.buf_first_lines[entry.bufnr] = entry.first_line
+    for i = 0, entry.num_lines - 1 do
+      state.line_bufs[entry.first_line + i] = entry.bufnr
+    end
   end
 
   vim.bo[state.buf].modifiable = true
@@ -693,6 +742,13 @@ local function create_window(position)
     })
   end
 
+  -- U marks the agent under the cursor unread
+  vim.api.nvim_buf_set_keymap(state.buf, "n", "U", "", {
+    callback = function() M.mark_unread() end,
+    noremap = true,
+    silent = true
+  })
+
   -- Add Escape key to close floating window
   if position == "float" then
     vim.api.nvim_buf_set_keymap(state.buf, "n", "<Esc>", "", {
@@ -735,6 +791,19 @@ function M.show(position)
     -- Use provided position or fall back to config side
     local window_position = position or state.config.side
     create_window(window_position)
+  end
+end
+
+-- Mark a cc.nvim agent unread until next viewed: the row under the cursor
+-- when in the buffers window, otherwise the current buffer
+function M.mark_unread()
+  local bufnr = vim.api.nvim_get_current_buf()
+  if bufnr == state.buf then
+    bufnr = state.line_bufs and state.line_bufs[vim.api.nvim_win_get_cursor(0)[1]]
+  end
+  local cc = package.loaded["cc"]
+  if not (bufnr and cc and cc.mark_unread and cc.mark_unread(bufnr)) then
+    vim.notify("Not a cc.nvim agent buffer", vim.log.levels.WARN)
   end
 end
 
@@ -956,6 +1025,10 @@ function M.setup(config)
     desc = "Hide buffer list"
   })
 
+  vim.api.nvim_create_user_command("BuffersMarkUnread", M.mark_unread, {
+    desc = "Mark the selected cc.nvim agent unread until next viewed"
+  })
+
   vim.api.nvim_create_user_command("BuffersNext", M.next, {
     desc = "Navigate to next buffer"
   })
@@ -1054,6 +1127,28 @@ function M.setup(config)
     callback = function()
       if state.win and vim.api.nvim_win_is_valid(state.win) then
         render()
+      end
+    end
+  })
+
+  -- Re-render when a cc.nvim agent changes state. Every render reads all
+  -- agent states fresh, so any render also corrects a missed event.
+  vim.api.nvim_create_autocmd("User", {
+    group = group,
+    pattern = "CcStateChanged",
+    callback = function()
+      if state.win and vim.api.nvim_win_is_valid(state.win) then
+        render()
+      end
+    end
+  })
+
+  -- Re-sync all agent states when a buffer is added (e.g. a new cc.nvim agent)
+  vim.api.nvim_create_autocmd("BufAdd", {
+    group = group,
+    callback = function()
+      if state.win and vim.api.nvim_win_is_valid(state.win) then
+        vim.defer_fn(render, 10)
       end
     end
   })
