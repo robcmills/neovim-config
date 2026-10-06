@@ -83,14 +83,11 @@ require('buffers').setup({
   },
   -- Optional: format display names (may return newlines for wrapping)
   format_file_name = function(filepath, display_name)
-    -- Example: wrap after ISO timestamp prefix (with optional "cc-" prefix)
-    local prefix, ts, rest = display_name:match("^(cc%-)(%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%-)(.*)")
-    if not ts then
-      prefix = ""
-      ts, rest = display_name:match("^(%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%-)(.*)")
-    end
+    -- Example: drop a "cc-" prefix, then wrap after an ISO timestamp prefix
+    display_name = display_name:gsub("^cc%-", "")
+    local ts, rest = display_name:match("^(%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%-)(.*)")
     if ts then
-      return prefix .. ts .. "\n" .. rest
+      return ts .. "\n" .. rest
     end
     return display_name
   end,

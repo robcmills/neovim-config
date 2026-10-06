@@ -568,13 +568,11 @@ vim.keymap.set('n', '<leader>u', ':luafile %<cr>', { desc = 'Execute current lua
 package.loaded['buffers'] = nil
 require('buffers').setup({
   format_file_name = function(filepath, display_name)
-    local prefix, ts, rest = display_name:match("^(cc%-)(%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%-)(.*)")
-    if not ts then
-      prefix = ""
-      ts, rest = display_name:match("^(%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%-)(.*)")
-    end
+    -- cc.nvim buffers get their own icon, so the "cc-" prefix is redundant
+    display_name = display_name:gsub("^cc%-", "")
+    local ts, rest = display_name:match("^(%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%-)(.*)")
     if ts then
-      return prefix .. ts .. "\n" .. rest
+      return ts .. "\n" .. rest
     end
     return display_name
   end,
