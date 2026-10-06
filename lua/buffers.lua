@@ -211,6 +211,7 @@ local AGENT_STATUS_ICONS = {
   waiting = "✋",
   interrupting = "🛑",
   working = "🚧",
+  delegating = "🚸",
   monitoring = "📡",
   unread = "📬",
   starting = "🌱",
