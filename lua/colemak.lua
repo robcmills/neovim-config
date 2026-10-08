@@ -24,6 +24,8 @@ vim.keymap.set("x", "e", "k", { desc = "Up (k)" })
 vim.keymap.set("x", "k", "e")
 vim.keymap.set("x", "i", "l", { desc = "Right (l)" })
 vim.keymap.set("x", "l", "i")
+-- nvim 0.12 default `in` (select child node) makes `i` wait for timeoutlen
+pcall(vim.keymap.del, "x", "in")
 
 vim.keymap.set("n", "N", "<C-d>", { desc = "Page down" })
 vim.keymap.set("n", "J", "N", { desc = "Previous search result" })
