@@ -772,6 +772,48 @@ require('cc').setup({
 -- vim.keymap.set('n', '<leader>cs', ':CcSend<cr>', { desc = 'Send cc.nvim prompt' })
 -- vim.keymap.set('n', '<leader>cx', ':CcStop<cr>', { desc = 'Stop cc.nvim generation' })
 
+-- A resumed parent comes back with no delegates in memory, so it shows ready
+-- while its Workers are still busy. `agents reconcile` finds the Workers'
+-- forwarders pointing at the old Neovim and relinks them here by session id.
+-- Run it once per instance, on its first state past starting. At most one
+-- job runs at a time; instances that come up meanwhile share one rerun.
+do
+  local seen = {}
+  local running, rerun = false, false
+  local function reconcile()
+    if running then
+      rerun = true
+      return
+    end
+    if vim.fn.executable('agents') ~= 1 then return end
+    running = true
+    local ok = pcall(vim.system, { 'agents', 'reconcile' }, { stdout = false, stderr = false }, function()
+      vim.schedule(function()
+        running = false
+        if rerun then
+          rerun = false
+          reconcile()
+        end
+      end)
+    end)
+    if not ok then running = false end
+  end
+  vim.api.nvim_create_autocmd('User', {
+    group = vim.api.nvim_create_augroup('cc_reconcile_delegates', { clear = true }),
+    pattern = 'CcStateChanged',
+    callback = function(ev)
+      local data = ev.data or {}
+      if data.closed then
+        seen[data.bufnr] = nil
+        return
+      end
+      if seen[data.bufnr] or data.state == 'starting' or data.state == 'exited' then return end
+      seen[data.bufnr] = true
+      reconcile()
+    end,
+  })
+end
+
 vim.keymap.set('n', '<leader>gmv', function()
   vim.cmd('Git merge development')
 end, { desc = 'Git merge development' })
