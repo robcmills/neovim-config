@@ -23,17 +23,18 @@ The shortcut letters ascend alphabetically based on the order in which the buffe
 
 cc.nvim agent buffers (output and prompt) are listed first, then file
 buffers. Agent rows are sorted by project priority from
-`jarvis priorities --json` (see agent_priority.lua): high, medium, low,
-unknown, then by effective priority, ties keeping their manual order. File
+`jarvis priorities --json` (see agent_priority.lua): level 1 to 5 (5 and
+up), then unknown, then by effective priority, ties keeping their manual order. File
 buffers are rendered top to bottom in the order they were opened by default,
 and the order is modifiable by the user to manually reorder them. Manual
 reordering moves a row only past a neighbor in its own group (and, for
 agents, of equal priority).
 
 Agent rows show the agent's status emoji in the icon column instead of a
-devicon, and their names are colored by priority bucket (magenta, orange,
-yellow, blue-gray for unknown; configurable). The current buffer's name is
-bold.
+devicon, and the session name (the buffer name until cc.nvim names the
+session), colored by level in rainbow order: orange, yellow, cyan, light
+blue, gray, and a dimmer gray for unknown (`priority_colors`).
+Only the current buffer's name is pure white, and bold.
 
 File buffer names are colored based on their focus order:
 - Most recently active buffer (a): white (configurable)
@@ -45,7 +46,7 @@ render, unless the buffers window itself is focused, where it stays on the
 row of the buffer it was on.
 
 :FocusNext focuses the highest-priority unread agent in this Neovim
-(bucket, then effective priority, then unread longest).
+(level, then effective priority, then unread longest).
 
 Buffers window width is configurable to either a fixed width or auto,
 with min and max width configurable settings.
@@ -98,11 +99,9 @@ require('buffers').setup({
     active = { link = "Normal" }, -- Most recently active buffer (a)
     previous = { link = "Title" }, -- Previously active buffer (b)
     inactive = { link = "Comment" }, -- All other buffers
-    priority_high = { fg = "#f472d0" }, -- Agent rows by priority bucket
-    priority_medium = { fg = "#ff9e64" },
-    priority_low = { fg = "#e5d07a" },
-    priority_unknown = { fg = "#8a93b8" },
   },
+  -- Optional: override agent row colors by level (1-5), unknown or current
+  priority_colors = { unknown = "#6c717c" },
   -- Command printing agent priorities as JSON (default below)
   priority_cmd = { "jarvis", "priorities", "--json" },
   -- Optional: format display names (may return newlines for wrapping)
@@ -186,6 +185,7 @@ end
 ---@field colors? BuffersColors Color configuration
 ---@field format_file_name? fun(filepath: string, display_name: string): string Optional function to format display names (may return newlines for wrapping)
 ---@field priority_cmd? string[] Command printing agent priorities as JSON
+---@field priority_colors? table<integer|string, string> Agent row colors by level, "unknown" and "current" (see PRIORITY_COLORS)
 
 ---@class BuffersColors (see nvim_set_hl)
 ---@field error table Highlight definition for buffers with LSP errors
@@ -193,10 +193,6 @@ end
 ---@field active table Highlight definition for the most recently active buffer
 ---@field previous table Highlight definition for the previously active buffer
 ---@field inactive table Highlight definition for all other buffers
----@field priority_high table Highlight definition for high-priority agent rows
----@field priority_medium table Highlight definition for medium-priority agent rows
----@field priority_low table Highlight definition for low-priority agent rows
----@field priority_unknown table Highlight definition for agent rows of unknown priority
 
 ---@class BuffersState
 state = {
@@ -217,18 +213,29 @@ state = {
       active = { link = "Normal" }, -- Most recently active buffer (a)
       previous = { link = "Title" }, -- Previously active buffer (b)  
       inactive = { link = "Comment" }, -- All other buffers
-      priority_high = { fg = "#f472d0" }, -- Agent rows by priority bucket
-      priority_medium = { fg = "#ff9e64" },
-      priority_low = { fg = "#e5d07a" },
-      priority_unknown = { fg = "#8a93b8" },
-    }
+    },
+    priority_colors = {},
   }
 }
 
--- Highlight group for an agent row's name, by bucket; bold when current
-local function priority_hl(bucket, current)
-  local group = "BuffersPriority" .. bucket:sub(1, 1):upper() .. bucket:sub(2)
-  return current and (group .. "Current") or group
+-- Agent row name colors by level (agent_priority.lua), in rainbow order
+local PRIORITY_COLORS = {
+  "#ff9e64", -- 1: orange
+  "#ffe14d", -- 2: yellow
+  "#4fd6be", -- 3: cyan
+  "#89c4ff", -- 4: light blue
+  "#9aa0aa", -- 5 and up: gray
+  unknown = "#737884", -- dimmer gray
+  current = "#ffffff", -- the current buffer's row, whatever its level (bold)
+}
+M.PRIORITY_COLORS = PRIORITY_COLORS
+
+-- Highlight group for an agent row's name
+local function priority_hl(level, current)
+  if current then
+    return "BuffersPriorityCurrent"
+  end
+  return "BuffersPriority" .. (level or "Unknown")
 end
 
 -- Set up highlight groups for buffer colors
@@ -238,13 +245,12 @@ local function setup_highlights()
   vim.api.nvim_set_hl(0, "BuffersInactive", state.config.colors.inactive)
   vim.api.nvim_set_hl(0, "BuffersError", state.config.colors.error)
   vim.api.nvim_set_hl(0, "BuffersModified", state.config.colors.modified)
-  for _, bucket in ipairs(priority.BUCKETS) do
-    local group = priority_hl(bucket, false)
-    vim.api.nvim_set_hl(0, group, state.config.colors["priority_" .. bucket])
-    -- The bold variant resolves links, since a link can't add bold
-    local resolved = vim.api.nvim_get_hl(0, { name = group, link = false })
-    vim.api.nvim_set_hl(0, priority_hl(bucket, true), vim.tbl_extend("force", resolved, { bold = true }))
+  local colors = vim.tbl_extend("force", PRIORITY_COLORS, state.config.priority_colors)
+  for level = 1, priority.LEVELS do
+    vim.api.nvim_set_hl(0, priority_hl(level), { fg = colors[level] })
   end
+  vim.api.nvim_set_hl(0, priority_hl(nil), { fg = colors.unknown })
+  vim.api.nvim_set_hl(0, priority_hl(nil, true), { fg = colors.current, bold = true })
 end
 
 local function setup_icons()
@@ -350,7 +356,7 @@ end
 
 -- Listed buffers in display order: agent rows sorted by priority (ties keep
 -- buffer_order), then file rows in buffer_order. Also returns, per agent
--- row, { bucket, key } (see agent_priority.lua).
+-- row, { level, key } (see agent_priority.lua).
 local function get_ordered_buffers(agents)
   agents = agents or get_agents()
   local agent_rows, files, info = {}, {}, {}
@@ -358,8 +364,8 @@ local function get_ordered_buffers(agents)
     if vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buflisted then
       local inst = agents[bufnr]
       if inst then
-        local bucket, effective = priority.of(inst)
-        info[bufnr] = { bucket = bucket, key = priority.key(bucket, effective) }
+        local level, effective = priority.of(inst)
+        info[bufnr] = { level = level, key = priority.key(level, effective) }
         table.insert(agent_rows, { bufnr = bufnr, index = i })
       else
         table.insert(files, bufnr)
@@ -442,9 +448,13 @@ local function build_layout()
       icon, icon_hl = get_devicon(name, bufnr)
     end
 
-    -- Apply format_file_name if configured
+    -- Agent rows show the session name; before cc.nvim names the session,
+    -- and for files, the buffer name through format_file_name if configured
+    local session_name = agents[bufnr] and agents[bufnr].name
     local display_name = name
-    if state.config.format_file_name then
+    if type(session_name) == "string" and session_name ~= "" then
+      display_name = session_name
+    elseif state.config.format_file_name then
       local filepath = vim.api.nvim_buf_get_name(bufnr)
       display_name = state.config.format_file_name(filepath, display_name)
     end
@@ -456,7 +466,7 @@ local function build_layout()
       letter = letter_map[bufnr],
       icon = icon,
       icon_hl = icon_hl,
-      bucket = info[bufnr] and info[bufnr].bucket,
+      agent = info[bufnr],
     }
     letter_width = math.max(letter_width, string.len(entry.letter))
     icon_width = math.max(icon_width, vim.api.nvim_strwidth(icon))
@@ -590,8 +600,8 @@ local function render()
   for _, entry in ipairs(buf_entries) do
     local bufnr = entry.bufnr
     local hl_group
-    if entry.bucket then
-      hl_group = priority_hl(entry.bucket, bufnr == layout.active)
+    if entry.agent then
+      hl_group = priority_hl(entry.agent.level, bufnr == layout.active)
     elseif has_diagnostic_errors(bufnr) then
       hl_group = "BuffersError"
     elseif has_unsaved_changes(bufnr) then
@@ -1050,6 +1060,9 @@ function M.setup(config)
     end
     if config.format_file_name then
       state.config.format_file_name = config.format_file_name
+    end
+    if config.priority_colors then
+      state.config.priority_colors = config.priority_colors
     end
   end
 

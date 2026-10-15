@@ -7,14 +7,15 @@
 -- one fetch, and a request during a fetch runs one more after it. If the
 -- command fails, the cache is nil and every session is "unknown".
 --
--- A session resolves to its tagged bucket (`sessions[sessionId]`), else the
--- bucket of the project whose dir is the longest prefix of its cwd, else
--- "unknown". A cwd at or under the store root never matches a project.
+-- A session's effective priority (1 is most important) is its tag's
+-- (`sessions[sessionId].effective`), else that of the project whose dir is
+-- the longest prefix of its cwd, else nil (unknown). A cwd at or under the
+-- store root never matches a project. Its level, which picks the color, is
+-- the effective priority with 5 and up sharing level 5.
 
 local M = {}
 
-M.BUCKETS = { "high", "medium", "low", "unknown" }
-local RANK = { high = 1, medium = 2, low = 3, unknown = 4 }
+M.LEVELS = 5 -- effective priorities of 5 and up share the last level
 
 local state = {
   cmd = { "jarvis", "priorities", "--json" },
@@ -107,22 +108,26 @@ local function under(path, dir)
   return path == dir or path:sub(1, #dir + 1) == dir .. "/"
 end
 
----@return string bucket "high", "medium", "low" or "unknown"
+local function level_of(effective)
+  return math.max(1, math.min(M.LEVELS, math.floor(effective)))
+end
+
+---@return integer|nil level 1 to M.LEVELS, nil when unknown
 ---@return number|nil effective
 function M.resolve(data, session_id, cwd)
   if not data then
-    return "unknown", nil
+    return nil, nil
   end
   local tagged = type(session_id) == "string" and data.sessions and data.sessions[session_id]
-  if tagged and RANK[tagged.bucket] and tagged.bucket ~= "unknown" then
-    return tagged.bucket, tagged.effective
+  if tagged and type(tagged.effective) == "number" then
+    return level_of(tagged.effective), tagged.effective
   end
   if type(cwd) ~= "string" or cwd == "" then
-    return "unknown", nil
+    return nil, nil
   end
   cwd = strip(cwd)
   if type(data.storeRoot) == "string" and under(cwd, strip(data.storeRoot)) then
-    return "unknown", nil
+    return nil, nil
   end
   local best, best_len = nil, -1
   for _, project in ipairs(data.projects or {}) do
@@ -133,24 +138,20 @@ function M.resolve(data, session_id, cwd)
       end
     end
   end
-  if best and RANK[best.bucket] then
-    return best.bucket, best.effective
+  if best and type(best.effective) == "number" then
+    return level_of(best.effective), best.effective
   end
-  return "unknown", nil
+  return nil, nil
 end
 
--- Bucket and effective priority of a cc.nvim instance snapshot (list_instances)
+-- Level and effective priority of a cc.nvim instance snapshot (list_instances)
 function M.of(inst)
   return M.resolve(state.data, inst.sessionId, inst.cwd)
 end
 
-function M.rank(bucket)
-  return RANK[bucket] or RANK.unknown
-end
-
--- Sort key for an instance: bucket rank, then effective priority (unset last)
-function M.key(bucket, effective)
-  return { M.rank(bucket), type(effective) == "number" and effective or math.huge }
+-- Sort key: level (unknown last), then effective priority (unset last)
+function M.key(level, effective)
+  return { level or (M.LEVELS + 1), type(effective) == "number" and effective or math.huge }
 end
 
 -- Compare two keys; returns nil on a tie so callers can break it themselves
@@ -163,7 +164,7 @@ function M.before(a, b)
   return nil
 end
 
--- The unread instance to focus next: highest priority, then unread longest
+-- The unread instance to focus next: lowest level, then effective, then unread longest
 -- (oldest lastModifiedAt), then lowest output bufnr. nil if none is unread.
 function M.pick_unread(instances, data)
   if data == nil then
@@ -172,9 +173,9 @@ function M.pick_unread(instances, data)
   local best, best_key
   for _, inst in ipairs(instances or {}) do
     if inst.state == "unread" then
-      local bucket, effective = M.resolve(data, inst.sessionId, inst.cwd)
+      local level, effective = M.resolve(data, inst.sessionId, inst.cwd)
       local modified = type(inst.lastModifiedAt) == "number" and inst.lastModifiedAt or math.huge
-      local key = M.key(bucket, effective)
+      local key = M.key(level, effective)
       table.insert(key, modified)
       table.insert(key, inst.outputBufnr or math.huge)
       if not best_key or M.before(key, best_key) then

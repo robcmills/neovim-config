@@ -26,32 +26,37 @@ local function eq(got, want)
   end
 end
 
-test('resolve: tagged session wins over cwd', function()
-  eq({ priority.resolve(data, 's-tagged', '/tmp/fn/side') }, { 'high', 1 })
+test("resolve: a tag's effective priority wins over cwd", function()
+  eq({ priority.resolve(data, 's-tagged', '/tmp/fn/side') }, { 1, 1 })
+  eq({ priority.resolve(data, 's-medium', '/Users/robcmills/jarvis') }, { 3, 3 })
 end)
-test('resolve: null-bucket tag falls through to cwd', function()
-  eq({ priority.resolve(data, 's-untagged', '/tmp/fn/side/x') }, { 'low', 6 })
+test('resolve: a tag with no effective priority falls through to cwd', function()
+  eq({ priority.resolve(data, 's-untagged', '/tmp/fn/side/x') }, { 5, 6 })
+end)
+test('resolve: level is the effective priority, 5 and up sharing level 5', function()
+  eq({ priority.resolve(data, 'x', '/tmp/fn/infra') }, { 4, 4 })
+  eq({ priority.resolve(data, 'x', '/tmp/fn/archive/2025') }, { 5, 12 })
 end)
 test('resolve: longest dir prefix (trailing slash ignored)', function()
-  eq({ priority.resolve(data, 'x', '/tmp/fn/nvim/lua/cc') }, { 'low', 5 })
-  eq({ priority.resolve(data, 'x', '/tmp/fn/nvim/lua') }, { 'low', 5 })
-  eq({ priority.resolve(data, 'x', '/tmp/fn/nvim') }, { 'medium', 3 })
+  eq({ priority.resolve(data, 'x', '/tmp/fn/nvim/lua/cc') }, { 5, 5 })
+  eq({ priority.resolve(data, 'x', '/tmp/fn/nvim/lua') }, { 5, 5 })
+  eq({ priority.resolve(data, 'x', '/tmp/fn/nvim') }, { 3, 3 })
 end)
 test('resolve: prefix match is on path boundaries', function()
-  eq({ priority.resolve(data, nil, '/tmp/fn/nvimx') }, { 'unknown', nil })
+  eq({ priority.resolve(data, nil, '/tmp/fn/nvimx') }, {})
 end)
 test('resolve: store root and below never match a project', function()
-  eq({ priority.resolve(data, nil, '/Users/robcmills/jarvis') }, { 'unknown', nil })
-  eq({ priority.resolve(data, vim.NIL, '/Users/robcmills/jarvis/projects/') }, { 'unknown', nil })
-  eq({ priority.resolve(data, nil, '/Users/robcmills/src') }, { 'high', 1 })
+  eq({ priority.resolve(data, nil, '/Users/robcmills/jarvis') }, {})
+  eq({ priority.resolve(data, vim.NIL, '/Users/robcmills/jarvis/projects/') }, {})
+  eq({ priority.resolve(data, nil, '/Users/robcmills/src') }, { 1, 1 })
 end)
 test('resolve: no data or no match is unknown', function()
-  eq({ priority.resolve(nil, 's-tagged', '/tmp/fn/voice') }, { 'unknown', nil })
-  eq({ priority.resolve(data, nil, '/elsewhere') }, { 'unknown', nil })
-  eq({ priority.resolve(data, nil, '') }, { 'unknown', nil })
+  eq({ priority.resolve(nil, 's-tagged', '/tmp/fn/voice') }, {})
+  eq({ priority.resolve(data, nil, '/elsewhere') }, {})
+  eq({ priority.resolve(data, nil, '') }, {})
 end)
 
-test('pick_unread: bucket, then effective, then oldest', function()
+test('pick_unread: level, then effective, then oldest', function()
   local insts = {
     { outputBufnr = 1, state = 'unread', cwd = '/tmp/fn/voice', lastModifiedAt = 50 },
     { outputBufnr = 2, state = 'unread', cwd = '/tmp/fn/delivery', lastModifiedAt = 300 },
@@ -70,9 +75,7 @@ end)
 local buffers = require('buffers')
 buffers.setup({
   format_file_name = function(_, name)
-    name = name:gsub('^cc%-', '')
-    local ts, rest = name:match('^(%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%-)(.*)')
-    return ts and (ts .. '\n' .. rest) or name
+    return (name:gsub('^cc%-', ''))
   end,
 })
 fixture.load()
@@ -103,14 +106,15 @@ end
 
 test('sidebar: agents sorted by bucket and effective, ties stable, then files', function()
   local n = names()
-  eq({ unpack(n, 1, 11) }, {
-    'estimation-publish', 'standup-for-delivery', 'a-very-long-session-name-that-wraps-in-the-sidebar', -- high 1
-    'wake-model', 'stopping', -- high 2
-    'colemak-visual-mode', 'new-chat', -- medium 3
-    'sidebar-worker', 'side-project', -- low 5, low 6
-    'misc-question', 'store-cleanup', -- unknown
+  eq({ unpack(n, 1, 14) }, {
+    'estimation-publish', 'standup-for-delivery', 'a-very-long-session-name-that-clips-in-the-sidebar', -- 1
+    'voice-workflow-hud', 'interrupt-retry', -- 2
+    'colemak-visual-mode', 'nvim-output', 'cy-quote-review', -- 3 (cy: tagged 3)
+    'infra-terraform-plan', -- 4
+    'sidebar-worker', 'browserslist-impl', 'old-archive-notes', -- 5, 6, 12 (level 5)
+    'manual-picks-no-match', 'store-cleanup', -- unknown
   })
-  eq({ unpack(n, 12) }, { '[No Name]', 'init.lua', 'buffers.lua', 'agent_priority.lua', 'README.md' })
+  eq({ unpack(n, 15) }, { '[No Name]', 'init.lua', 'buffers.lua', 'agent_priority.lua', 'README.md' })
 end)
 
 test('sidebar: names start in the same display column on every line', function()
@@ -127,7 +131,7 @@ test('sidebar: agent rows carry the status emoji, no devicon, no name prefix', f
   local r = rows()
   eq(r[1]:match('^%S+ (%S+)'), '🚧')
   eq(r[2]:match('^%S+ (%S+)'), '📬')
-  eq(vim.fn.strdisplaywidth(r[1]), vim.fn.strdisplaywidth('a 🚧 2026-10-15T09:01:00-'))
+  eq(vim.fn.strdisplaywidth(r[1]), vim.fn.strdisplaywidth('a 🚧 estimation-publish'))
 end)
 
 local function hl_at(line, col)
@@ -141,16 +145,20 @@ local function hl_at(line, col)
   end
 end
 
-test('sidebar: names colored by bucket, the current one bold', function()
+test('sidebar: names colored by level; only the current one white and bold', function()
   local first = vim.api.nvim_buf_get_lines(vim.fn.bufnr('VerticalBuffersList'), 0, 1, false)[1]
   local col = #first - 1
-  eq(hl_at(0, col), 'BuffersPriorityHigh')
+  eq(hl_at(0, col), 'BuffersPriority1')
   local inst = fixture.by_name('colemak')
   vim.api.nvim_set_current_buf(inst.outputBufnr)
   local line = vim.api.nvim_win_get_cursor(vim.fn.win_findbuf(vim.fn.bufnr('VerticalBuffersList'))[1])[1]
   local text = vim.api.nvim_buf_get_lines(vim.fn.bufnr('VerticalBuffersList'), line - 1, line, false)[1]
-  eq(hl_at(line - 1, #text - 1), 'BuffersPriorityMediumCurrent')
-  eq(vim.api.nvim_get_hl(0, { name = 'BuffersPriorityMediumCurrent' }).bold, true)
+  eq(hl_at(line - 1, #text - 1), 'BuffersPriorityCurrent')
+  local current = vim.api.nvim_get_hl(0, { name = 'BuffersPriorityCurrent' })
+  eq({ current.fg, current.bold }, { 0xffffff, true })
+  for level = 1, priority.LEVELS do
+    assert(vim.api.nvim_get_hl(0, { name = 'BuffersPriority' .. level }).fg ~= 0xffffff, 'level ' .. level .. ' is pure white')
+  end
 end)
 
 local function cursor_buf()
@@ -159,22 +167,22 @@ local function cursor_buf()
   return line
 end
 
-test('FocusNext: picks the tagged high-1 session, then high 2, then low, then nothing', function()
+test('FocusNext: unread by level, then nothing', function()
   local order = {}
-  for _ = 1, 3 do
+  for _ = 1, 5 do
     vim.cmd('FocusNext')
     local inst
     for _, i in ipairs(fixture.instances) do
       if i.outputBufnr == vim.api.nvim_get_current_buf() then inst = i end
     end
-    table.insert(order, inst and inst.name:match('%d%d%-(%a[%w-]*)$') or '?')
+    table.insert(order, inst and inst.name or '?')
     -- Sidebar cursor sits on the current buffer's first row
     local sidebar = vim.fn.bufnr('VerticalBuffersList')
     local text = vim.api.nvim_buf_get_lines(sidebar, cursor_buf() - 1, cursor_buf() + 1, false)
-    assert(table.concat(text, ' '):find(inst.name:sub(21), 1, true), 'cursor not on current row: ' .. vim.inspect(text))
+    assert(text[1]:find(inst.name, 1, true), 'cursor not on current row: ' .. vim.inspect(text))
     vim.wait(50)
   end
-  eq(order, { 'standup-for-delivery', 'wake-model', 'side-project' })
+  eq(order, { 'standup-for-delivery', 'voice-workflow-hud', 'cy-quote-review', 'infra-terraform-plan', 'browserslist-impl' })
   local before = vim.api.nvim_get_current_buf()
   local notes = {}
   local notify = vim.notify
@@ -192,7 +200,7 @@ test('failing priorities command: every agent is unknown, nothing errors', funct
   eq(priority.data(), nil)
   local buf = vim.fn.bufnr('VerticalBuffersList')
   local lines = vim.api.nvim_buf_get_lines(buf, 0, 1, false)
-  eq(hl_at(0, #lines[1] - 1):match('^BuffersPriorityUnknown') ~= nil, true)
+  eq(hl_at(0, #lines[1] - 1), 'BuffersPriorityUnknown')
   priority.setup({ cmd = { 'cat', fixture.json } })
   priority.refresh()
   priority.wait(2000)
@@ -202,18 +210,18 @@ test('movePrev/moveNext: files reorder, agents only among equal priority', funct
   local file = vim.fn.bufnr(vim.fn.expand('~/.config/nvim/lua/buffers.lua'))
   vim.api.nvim_set_current_buf(file)
   buffers.movePrev()
-  eq(names()[13], 'buffers.lua')
+  eq(names()[16], 'buffers.lua')
   buffers.movePrev() -- now the first file: it never moves into the agents
   buffers.movePrev()
-  eq({ unpack(names(), 11, 13) }, { 'store-cleanup', 'buffers.lua', '[No Name]' })
+  eq({ unpack(names(), 14, 16) }, { 'store-cleanup', 'buffers.lua', '[No Name]' })
   buffers.moveNext()
-  eq({ unpack(names(), 12, 13) }, { '[No Name]', 'buffers.lua' })
+  eq({ unpack(names(), 15, 16) }, { '[No Name]', 'buffers.lua' })
   -- Equal-priority agents swap; across a bucket boundary nothing moves
-  vim.api.nvim_set_current_buf(fixture.by_name('stopping').outputBufnr)
+  vim.api.nvim_set_current_buf(fixture.by_name('interrupt-retry').outputBufnr)
   buffers.movePrev()
-  eq({ unpack(names(), 4, 5) }, { 'stopping', 'wake-model' })
+  eq({ unpack(names(), 4, 5) }, { 'interrupt-retry', 'voice-workflow-hud' })
   buffers.movePrev()
-  eq({ unpack(names(), 3, 5) }, { 'a-very-long-session-name-that-wraps-in-the-sidebar', 'stopping', 'wake-model' })
+  eq({ unpack(names(), 3, 5) }, { 'a-very-long-session-name-that-clips-in-the-sidebar', 'interrupt-retry', 'voice-workflow-hud' })
 end)
 
 test('refresh coalesces a burst into one fetch', function()
@@ -224,6 +232,13 @@ test('refresh coalesces a burst into one fetch', function()
   priority.wait(2000)
   vim.system = system
   eq(calls, 1)
+end)
+
+test('priority_colors overrides a level color', function()
+  buffers.setup({ priority_colors = { [3] = '#123456' } })
+  eq(vim.api.nvim_get_hl(0, { name = 'BuffersPriority3' }).fg, 0x123456)
+  eq(vim.api.nvim_get_hl(0, { name = 'BuffersPriority2' }).fg, tonumber(buffers.PRIORITY_COLORS[2]:sub(2), 16))
+  buffers.setup({ priority_colors = {} })
 end)
 
 print(('%d/%d passed'):format(count - failures, count))
