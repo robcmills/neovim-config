@@ -46,7 +46,8 @@ render, unless the buffers window itself is focused, where it stays on the
 row of the buffer it was on.
 
 :FocusNext focuses the highest-priority unread agent in this Neovim
-(level, then effective priority, then unread longest).
+(level, then effective priority, then unread longest). With nothing unread
+it focuses the top agent row.
 
 Buffers window width is configurable to either a fixed width or auto,
 with min and max width configurable settings.
@@ -128,7 +129,7 @@ Usage:
 - :BuffersShowFloat - Show buffer list in a floating window
 - :BuffersMarkUnread - Mark the cc.nvim agent under the cursor (or the current
   buffer) unread until next viewed; `U` in the buffers window does the same
-- :FocusNext - Focus the highest-priority unread cc.nvim agent
+- :FocusNext - Focus the highest-priority unread cc.nvim agent, else the top one
 
 ]]
 
@@ -1022,17 +1023,28 @@ function M.moveNext()
 end
 
 -- Focus the unread cc.nvim agent of highest priority (then unread longest)
--- the way the buffers list opens a row. Waits briefly for a fresh priority
--- fetch, and falls back to the cached one.
+-- the way the buffers list opens a row. With nothing unread, focus the top
+-- agent row instead. Waits briefly for a fresh priority fetch, and falls
+-- back to the cached one.
 function M.focus_next()
   priority.refresh()
   priority.wait(400)
   local inst = priority.pick_unread(list_instances())
-  if not inst then
-    vim.notify("Nothing unread")
-    return
+  local target = inst and inst.outputBufnr
+  if not target then
+    local agents = get_agents()
+    local buffers, info = get_ordered_buffers(agents)
+    if not info[buffers[1]] then
+      vim.notify("Nothing unread")
+      return
+    end
+    target = buffers[1]
+    if get_active_row(buffers, agents) == target then
+      vim.notify("Nothing unread; already on top")
+      return
+    end
   end
-  switch_to_buffer(inst.outputBufnr)
+  switch_to_buffer(target)
   render()
 end
 
@@ -1114,7 +1126,7 @@ function M.setup(config)
   })
 
   vim.api.nvim_create_user_command("FocusNext", M.focus_next, {
-    desc = "Focus the highest-priority unread cc.nvim agent"
+    desc = "Focus the highest-priority unread cc.nvim agent, else the top one"
   })
 
   vim.api.nvim_create_user_command("BuffersNext", M.next, {

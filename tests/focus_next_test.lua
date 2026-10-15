@@ -167,7 +167,7 @@ local function cursor_buf()
   return line
 end
 
-test('FocusNext: unread by level, then nothing', function()
+test('FocusNext: unread by level, then the top row', function()
   local order = {}
   for _ = 1, 5 do
     vim.cmd('FocusNext')
@@ -183,17 +183,33 @@ test('FocusNext: unread by level, then nothing', function()
     vim.wait(50)
   end
   eq(order, { 'standup-for-delivery', 'voice-workflow-hud', 'cy-quote-review', 'infra-terraform-plan', 'browserslist-impl' })
-  local before = vim.api.nvim_get_current_buf()
   local notes = {}
   local notify = vim.notify
   vim.notify = function(msg) table.insert(notes, msg) end
+  -- Nothing unread: the top agent row, then stay there
   vim.cmd('FocusNext')
+  eq(vim.api.nvim_get_current_buf(), fixture.by_name('estimation-publish').outputBufnr)
+  eq(notes, {})
+  vim.cmd('FocusNext')
+  eq(notes, { 'Nothing unread; already on top' })
+  eq(vim.api.nvim_get_current_buf(), fixture.by_name('estimation-publish').outputBufnr)
+  -- From its prompt buffer, the top row counts as current too
+  vim.api.nvim_set_current_buf(fixture.by_name('estimation-publish').promptBufnr)
+  vim.cmd('FocusNext')
+  eq(notes[2], 'Nothing unread; already on top')
+  -- No agents at all
+  local instances = fixture.instances
+  fixture.instances = {}
+  local before = vim.api.nvim_get_current_buf()
+  vim.cmd('FocusNext')
+  fixture.instances = instances
   vim.notify = notify
-  eq(notes, { 'Nothing unread' })
+  eq(notes[3], 'Nothing unread')
   eq(vim.api.nvim_get_current_buf(), before)
 end)
 
 test('failing priorities command: every agent is unknown, nothing errors', function()
+  vim.api.nvim_set_current_buf(vim.fn.bufnr(vim.fn.expand('~/.config/nvim/init.lua')))
   priority.setup({ cmd = { 'false' } })
   priority.refresh()
   priority.wait(2000)
