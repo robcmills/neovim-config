@@ -21,13 +21,31 @@ c ParenDir/index.ts
 When the buffers window is focused, pressing one of the letters opens the corresponding buffer.
 The shortcut letters ascend alphabetically based on the order in which the buffers were focused.
 
-Buffers are rendered top to bottom in the order they were opened by default,
-and the order is modifiable by the user to manually reorder them.
+cc.nvim agent buffers (output and prompt) are listed first, then file
+buffers. Agent rows are sorted by project priority from
+`jarvis priorities --json` (see agent_priority.lua): high, medium, low,
+unknown, then by effective priority, ties keeping their manual order. File
+buffers are rendered top to bottom in the order they were opened by default,
+and the order is modifiable by the user to manually reorder them. Manual
+reordering moves a row only past a neighbor in its own group (and, for
+agents, of equal priority).
 
-Buffer names are colored based on their focus order:
+Agent rows show the agent's status emoji in the icon column instead of a
+devicon, and their names are colored by priority bucket (magenta, orange,
+yellow, blue-gray for unknown; configurable). The current buffer's name is
+bold.
+
+File buffer names are colored based on their focus order:
 - Most recently active buffer (a): white (configurable)
 - Previously active buffer (b): soft (configurable)
 - All other buffers: gray (configurable)
+
+The cursor in the buffers window sits on the current buffer's row after every
+render, unless the buffers window itself is focused, where it stays on the
+row of the buffer it was on.
+
+:FocusNext focuses the highest-priority unread agent in this Neovim
+(bucket, then effective priority, then unread longest).
 
 Buffers window width is configurable to either a fixed width or auto,
 with min and max width configurable settings.
@@ -80,7 +98,13 @@ require('buffers').setup({
     active = { link = "Normal" }, -- Most recently active buffer (a)
     previous = { link = "Title" }, -- Previously active buffer (b)
     inactive = { link = "Comment" }, -- All other buffers
+    priority_high = { fg = "#f472d0" }, -- Agent rows by priority bucket
+    priority_medium = { fg = "#ff9e64" },
+    priority_low = { fg = "#e5d07a" },
+    priority_unknown = { fg = "#8a93b8" },
   },
+  -- Command printing agent priorities as JSON (default below)
+  priority_cmd = { "jarvis", "priorities", "--json" },
   -- Optional: format display names (may return newlines for wrapping)
   format_file_name = function(filepath, display_name)
     -- Example: drop a "cc-" prefix, then wrap after an ISO timestamp prefix
@@ -105,12 +129,14 @@ Usage:
 - :BuffersShowFloat - Show buffer list in a floating window
 - :BuffersMarkUnread - Mark the cc.nvim agent under the cursor (or the current
   buffer) unread until next viewed; `U` in the buffers window does the same
+- :FocusNext - Focus the highest-priority unread cc.nvim agent
 
 ]]
 
 local M = {}
 
 local devicons_ok, devicons = pcall(require, "nvim-web-devicons")
+local priority = require("agent_priority")
 
 local state -- forward declaration; initialized below
 
@@ -159,6 +185,7 @@ end
 ---@field side? string Side of the screen to show buffers window ("left" or "right", default: "left")
 ---@field colors? BuffersColors Color configuration
 ---@field format_file_name? fun(filepath: string, display_name: string): string Optional function to format display names (may return newlines for wrapping)
+---@field priority_cmd? string[] Command printing agent priorities as JSON
 
 ---@class BuffersColors (see nvim_set_hl)
 ---@field error table Highlight definition for buffers with LSP errors
@@ -166,6 +193,10 @@ end
 ---@field active table Highlight definition for the most recently active buffer
 ---@field previous table Highlight definition for the previously active buffer
 ---@field inactive table Highlight definition for all other buffers
+---@field priority_high table Highlight definition for high-priority agent rows
+---@field priority_medium table Highlight definition for medium-priority agent rows
+---@field priority_low table Highlight definition for low-priority agent rows
+---@field priority_unknown table Highlight definition for agent rows of unknown priority
 
 ---@class BuffersState
 state = {
@@ -186,9 +217,19 @@ state = {
       active = { link = "Normal" }, -- Most recently active buffer (a)
       previous = { link = "Title" }, -- Previously active buffer (b)  
       inactive = { link = "Comment" }, -- All other buffers
+      priority_high = { fg = "#f472d0" }, -- Agent rows by priority bucket
+      priority_medium = { fg = "#ff9e64" },
+      priority_low = { fg = "#e5d07a" },
+      priority_unknown = { fg = "#8a93b8" },
     }
   }
 }
+
+-- Highlight group for an agent row's name, by bucket; bold when current
+local function priority_hl(bucket, current)
+  local group = "BuffersPriority" .. bucket:sub(1, 1):upper() .. bucket:sub(2)
+  return current and (group .. "Current") or group
+end
 
 -- Set up highlight groups for buffer colors
 local function setup_highlights()
@@ -197,6 +238,13 @@ local function setup_highlights()
   vim.api.nvim_set_hl(0, "BuffersInactive", state.config.colors.inactive)
   vim.api.nvim_set_hl(0, "BuffersError", state.config.colors.error)
   vim.api.nvim_set_hl(0, "BuffersModified", state.config.colors.modified)
+  for _, bucket in ipairs(priority.BUCKETS) do
+    local group = priority_hl(bucket, false)
+    vim.api.nvim_set_hl(0, group, state.config.colors["priority_" .. bucket])
+    -- The bold variant resolves links, since a link can't add bold
+    local resolved = vim.api.nvim_get_hl(0, { name = group, link = false })
+    vim.api.nvim_set_hl(0, priority_hl(bucket, true), vim.tbl_extend("force", resolved, { bold = true }))
+  end
 end
 
 local function setup_icons()
@@ -216,28 +264,23 @@ local AGENT_STATUS_ICONS = {
   exited = "💀",
 }
 
--- Map bufnr -> cc.nvim instance state for every agent output and prompt buffer
-local function get_agent_states()
+local function list_instances()
   local cc = package.loaded["cc"]
   if not cc or not cc.list_instances then
     return {}
   end
   local ok, instances = pcall(cc.list_instances)
-  if not ok then
-    return {}
-  end
-  local states = {}
-  for _, inst in ipairs(instances) do
-    states[inst.outputBufnr] = inst.state
-    states[inst.promptBufnr] = inst.state
-  end
-  return states
+  return ok and instances or {}
 end
 
--- Status prefix ("✋ ") for agent buffers, "" for everything else
-local function get_status_prefix(bufnr, agent_states)
-  local icon = AGENT_STATUS_ICONS[agent_states[bufnr]]
-  return icon and (icon .. " ") or ""
+-- Map bufnr -> cc.nvim instance snapshot for every agent output and prompt buffer
+local function get_agents()
+  local agents = {}
+  for _, inst in ipairs(list_instances()) do
+    agents[inst.outputBufnr] = inst
+    agents[inst.promptBufnr] = inst
+  end
+  return agents
 end
 
 -- Get display name for buffer
@@ -305,123 +348,67 @@ local function update_focus_order(bufnr)
   table.insert(state.focus_order, 1, bufnr)
 end
 
-local function get_ordered_buffers()
-  local buffers = {}
-
-  for _, bufnr in ipairs(state.buffer_order) do
+-- Listed buffers in display order: agent rows sorted by priority (ties keep
+-- buffer_order), then file rows in buffer_order. Also returns, per agent
+-- row, { bucket, key } (see agent_priority.lua).
+local function get_ordered_buffers(agents)
+  agents = agents or get_agents()
+  local agent_rows, files, info = {}, {}, {}
+  for i, bufnr in ipairs(state.buffer_order) do
     if vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buflisted then
-      table.insert(buffers, bufnr)
+      local inst = agents[bufnr]
+      if inst then
+        local bucket, effective = priority.of(inst)
+        info[bufnr] = { bucket = bucket, key = priority.key(bucket, effective) }
+        table.insert(agent_rows, { bufnr = bufnr, index = i })
+      else
+        table.insert(files, bufnr)
+      end
     end
   end
-
-  return buffers
-end
-
--- Calculate auto width based on buffer names
-local function calculate_auto_width()
-  local buffers = get_ordered_buffers()
-  local calculated_width = state.config.min_width or 25 -- minimum width
-
-  if #buffers == 0 then
-    return calculated_width
-  end
-
-  -- Sort by focus order for letter assignment (same logic as render function)
-  local letter_order = {}
-  for _, bufnr in ipairs(buffers) do
-    table.insert(letter_order, bufnr)
-  end
-  table.sort(letter_order, function(a, b)
-    local a_pos = #state.focus_order + 1
-    local b_pos = #state.focus_order + 1
-    for i, buf in ipairs(state.focus_order) do
-      if buf == a then a_pos = i end
-      if buf == b then b_pos = i end
+  table.sort(agent_rows, function(a, b)
+    local before = priority.before(info[a.bufnr].key, info[b.bufnr].key)
+    if before == nil then
+      return a.index < b.index
     end
-    return a_pos < b_pos
+    return before
   end)
 
-  -- Create letter mapping (same as render function)
-  local letter_map = {}
-  for i, bufnr in ipairs(letter_order) do
-    letter_map[bufnr] = get_letter(i)
+  local buffers = {}
+  for _, row in ipairs(agent_rows) do
+    table.insert(buffers, row.bufnr)
   end
+  vim.list_extend(buffers, files)
+  return buffers, info
+end
 
-  local agent_states = get_agent_states()
-
-  -- Calculate width for each buffer line
+-- The row the current buffer belongs to: the current buffer, or else the
+-- most recently focused buffer that has a row. An agent's prompt buffer maps
+-- to its output buffer's row.
+local function get_active_row(buffers, agents)
+  local rows = {}
   for _, bufnr in ipairs(buffers) do
-    local name = get_buffer_name(bufnr, buffers)
-    local letter = letter_map[bufnr]
-    local icon = get_devicon(name, bufnr)
-
-    -- Apply format_file_name if configured
-    local display_name = name
-    if state.config.format_file_name then
-      local filepath = vim.api.nvim_buf_get_name(bufnr)
-      display_name = state.config.format_file_name(filepath, display_name)
+    rows[bufnr] = true
+  end
+  local candidates = { vim.api.nvim_get_current_buf() }
+  vim.list_extend(candidates, state.focus_order)
+  for _, bufnr in ipairs(candidates) do
+    if rows[bufnr] then
+      return bufnr
     end
-
-    local name_parts = vim.split(display_name, "\n", { plain = true })
-    name_parts[1] = get_status_prefix(bufnr, agent_states) .. name_parts[1]
-
-    -- First line: "letter icon name" + 1 margin column
-    local icon_len = icon ~= "" and (string.len(icon) + 1) or 0
-    local first_line_width = string.len(letter) + 1 + icon_len + vim.api.nvim_strwidth(name_parts[1]) + 1
-    calculated_width = math.max(calculated_width, first_line_width)
-
-    -- Continuation lines: indent + name_part + margin
-    if #name_parts > 1 then
-      local prefix
-      if icon ~= "" then
-        prefix = string.format("%s %s ", letter, icon)
-      else
-        prefix = string.format("%s ", letter)
-      end
-      local indent_width = vim.api.nvim_strwidth(prefix)
-      for i = 2, #name_parts do
-        local cont_width = indent_width + string.len(name_parts[i]) + 1
-        calculated_width = math.max(calculated_width, cont_width)
-      end
+    local inst = agents[bufnr]
+    if inst and rows[inst.outputBufnr] then
+      return inst.outputBufnr
     end
   end
-
-  -- Apply max_width limit if configured
-  if state.config.max_width then
-    calculated_width = math.min(calculated_width, state.config.max_width)
-  end
-
-  return calculated_width
 end
 
--- Get effective width (auto or configured)
-local function get_effective_width()
-  if state.config.width == 'auto' then
-    return calculate_auto_width()
-  else
-    return state.config.width
-  end
-end
-
--- Move cursor to active buffer line in buffers window
-local function move_cursor_to_active_buffer()
-  if not state.win or not vim.api.nvim_win_is_valid(state.win) then
-    return
-  end
-
-  local current_bufnr = vim.api.nvim_get_current_buf()
-  local first_line = state.buf_first_lines[current_bufnr]
-  if first_line then
-    vim.api.nvim_win_set_cursor(state.win, {first_line, 0})
-  end
-end
-
-local function render()
-  if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
-    return
-  end
-
-  local buffers = get_ordered_buffers()
+-- Lay out every row: its lines, the byte columns of its icon and name, and
+-- the width the window needs. The icon column is as wide as the widest icon
+-- (status emoji take two cells, devicons one), so names align on every row.
+local function build_layout()
+  local agents = get_agents()
+  local buffers, info = get_ordered_buffers(agents)
 
   -- Sort by focus order for letter assignment
   local letter_order = {}
@@ -444,17 +431,16 @@ local function render()
     letter_map[bufnr] = get_letter(i)
   end
 
-  -- Render lines
-  local lines = {}
-  -- Track line info per buffer entry
-  local buf_entries = {}
-
-  local agent_states = get_agent_states()
-
+  local entries = {}
+  local letter_width, icon_width = 0, 0
   for _, bufnr in ipairs(buffers) do
     local name = get_buffer_name(bufnr, buffers)
-    local letter = letter_map[bufnr]
-    local icon, icon_hl = get_devicon(name, bufnr)
+    local icon, icon_hl
+    if agents[bufnr] then
+      icon = AGENT_STATUS_ICONS[agents[bufnr].state] or ""
+    else
+      icon, icon_hl = get_devicon(name, bufnr)
+    end
 
     -- Apply format_file_name if configured
     local display_name = name
@@ -463,41 +449,125 @@ local function render()
       display_name = state.config.format_file_name(filepath, display_name)
     end
 
-    local name_parts = vim.split(display_name, "\n", { plain = true })
-    name_parts[1] = get_status_prefix(bufnr, agent_states) .. name_parts[1]
-    local first_line = #lines + 1
-
-    -- First line: letter icon name
-    if icon ~= "" then
-      table.insert(lines, string.format("%s %s %s", letter, icon, name_parts[1]))
-    else
-      table.insert(lines, string.format("%s %s", letter, name_parts[1]))
-    end
-
-    -- Continuation lines: indented to align after letter+icon
-    if #name_parts > 1 then
-      local prefix
-      if icon ~= "" then
-        prefix = string.format("%s %s ", letter, icon)
-      else
-        prefix = string.format("%s ", letter)
-      end
-      local indent = string.rep(" ", vim.api.nvim_strwidth(prefix))
-      for i = 2, #name_parts do
-        table.insert(lines, indent .. name_parts[i])
-      end
-    end
-
-    table.insert(buf_entries, {
+    local entry = {
       bufnr = bufnr,
-      first_line = first_line,
-      num_lines = #name_parts,
       name = name,
-      letter = letter,
+      name_parts = vim.split(display_name, "\n", { plain = true }),
+      letter = letter_map[bufnr],
       icon = icon,
       icon_hl = icon_hl,
-    })
+      bucket = info[bufnr] and info[bufnr].bucket,
+    }
+    letter_width = math.max(letter_width, string.len(entry.letter))
+    icon_width = math.max(icon_width, vim.api.nvim_strwidth(icon))
+    table.insert(entries, entry)
   end
+
+  -- First line: "letter icon name"; continuation lines indented to the name.
+  -- Every line gets 1 margin column in the width.
+  local lines = {}
+  local width = state.config.min_width or 25
+  for _, entry in ipairs(entries) do
+    local prefix = entry.letter .. string.rep(" ", letter_width - string.len(entry.letter)) .. " "
+    entry.icon_col = string.len(prefix)
+    if icon_width > 0 then
+      prefix = prefix .. entry.icon .. string.rep(" ", icon_width - vim.api.nvim_strwidth(entry.icon)) .. " "
+    end
+    entry.name_col = string.len(prefix)
+    entry.first_line = #lines + 1
+    entry.num_lines = #entry.name_parts
+
+    local indent = string.rep(" ", vim.api.nvim_strwidth(prefix))
+    for i, part in ipairs(entry.name_parts) do
+      local line = (i == 1 and prefix or indent) .. part
+      table.insert(lines, line)
+      width = math.max(width, vim.api.nvim_strwidth(line) + 1)
+    end
+  end
+
+  -- Apply max_width limit if configured
+  if state.config.max_width then
+    width = math.min(width, state.config.max_width)
+  end
+
+  return {
+    agents = agents,
+    buffers = buffers,
+    entries = entries,
+    lines = lines,
+    letter_map = letter_map,
+    width = width,
+    active = get_active_row(buffers, agents),
+  }
+end
+
+-- Calculate auto width based on buffer names
+local function calculate_auto_width()
+  return build_layout().width
+end
+
+-- Get effective width (auto or configured)
+local function get_effective_width()
+  if state.config.width == 'auto' then
+    return calculate_auto_width()
+  else
+    return state.config.width
+  end
+end
+
+-- Put the buffers window cursor on `bufnr`'s row
+local function move_cursor_to_buffer(bufnr)
+  if not state.win or not vim.api.nvim_win_is_valid(state.win) then
+    return
+  end
+  local first_line = bufnr and state.buf_first_lines[bufnr]
+  if first_line then
+    vim.api.nvim_win_set_cursor(state.win, {first_line, 0})
+  end
+end
+
+-- The buffer whose row is under the buffers window cursor
+local function buffer_under_cursor()
+  if not state.win or not vim.api.nvim_win_is_valid(state.win) or not state.line_bufs then
+    return nil
+  end
+  return state.line_bufs[vim.api.nvim_win_get_cursor(state.win)[1]]
+end
+
+-- Extend the cursorline over the continuation lines of the row under the
+-- cursor, so a wrapped row is highlighted whole
+local function highlight_cursor_row()
+  if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
+    return
+  end
+  local ns = vim.api.nvim_create_namespace("buffers_cursor_row")
+  vim.api.nvim_buf_clear_namespace(state.buf, ns, 0, -1)
+  local bufnr = buffer_under_cursor()
+  local first_line = bufnr and state.buf_first_lines[bufnr]
+  if not first_line then
+    return
+  end
+  local line = first_line + 1
+  while state.line_bufs[line] == bufnr do
+    vim.api.nvim_buf_set_extmark(state.buf, ns, line - 1, 0, { line_hl_group = "CursorLine" })
+    line = line + 1
+  end
+end
+
+local function render()
+  if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
+    return
+  end
+
+  -- With the buffers window focused, the cursor follows the buffer it was on
+  -- through a re-sort; otherwise it goes to the current buffer's row
+  local sidebar_focused = state.win and vim.api.nvim_win_is_valid(state.win)
+    and vim.api.nvim_get_current_win() == state.win
+  local cursor_bufnr = sidebar_focused and buffer_under_cursor() or nil
+
+  local layout = build_layout()
+  local lines = layout.lines
+  local buf_entries = layout.entries
 
   -- Store first-line mapping for cursor positioning, and the reverse
   -- (every display line, including continuations) for cursor lookups
@@ -520,7 +590,9 @@ local function render()
   for _, entry in ipairs(buf_entries) do
     local bufnr = entry.bufnr
     local hl_group
-    if has_diagnostic_errors(bufnr) then
+    if entry.bucket then
+      hl_group = priority_hl(entry.bucket, bufnr == layout.active)
+    elseif has_diagnostic_errors(bufnr) then
       hl_group = "BuffersError"
     elseif has_unsaved_changes(bufnr) then
       hl_group = "BuffersModified"
@@ -542,30 +614,19 @@ local function render()
       end
     end
 
-    local letter = entry.letter
-    local icon = entry.icon
-    local icon_hl = entry.icon_hl
     local line_idx = entry.first_line
 
     -- Highlight first line: icon + name
-    local name_start
-    if icon ~= "" then
-      local icon_start = string.len(letter) + 1
-      local icon_end = icon_start + string.len(icon)
-      if icon_hl then
-        vim.api.nvim_buf_set_extmark(state.buf, vim.api.nvim_create_namespace("buffers_icons"),
-          line_idx - 1, icon_start, {
-            end_col = icon_end,
-            hl_group = icon_hl
-          })
-      end
-      name_start = icon_end + 1
-    else
-      name_start = string.len(letter) + 1
+    if entry.icon ~= "" and entry.icon_hl then
+      vim.api.nvim_buf_set_extmark(state.buf, vim.api.nvim_create_namespace("buffers_icons"),
+        line_idx - 1, entry.icon_col, {
+          end_col = entry.icon_col + string.len(entry.icon),
+          hl_group = entry.icon_hl
+        })
     end
 
     vim.api.nvim_buf_set_extmark(state.buf, vim.api.nvim_create_namespace("buffers_colors"),
-      line_idx - 1, name_start, {
+      line_idx - 1, entry.name_col, {
         end_col = string.len(lines[line_idx]),
         hl_group = hl_group
       })
@@ -587,16 +648,17 @@ local function render()
 
   -- Store letter mapping for navigation
   state.letter_map = {}
-  for bufnr, letter in pairs(letter_map) do
+  for bufnr, letter in pairs(layout.letter_map) do
     state.letter_map[letter] = bufnr
   end
 
   -- Update window width if auto width is enabled
   if state.config.width == 'auto' and state.win and vim.api.nvim_win_is_valid(state.win) then
-    vim.api.nvim_win_set_width(state.win, get_effective_width())
+    vim.api.nvim_win_set_width(state.win, layout.width)
   end
 
-  move_cursor_to_active_buffer()
+  move_cursor_to_buffer(cursor_bufnr or layout.active)
+  highlight_cursor_row()
 end
 
 -- Create buffer window
@@ -631,19 +693,8 @@ local function create_window(position)
   if position == "float" then
     -- Create floating window
     local width = get_effective_width()
-    -- Calculate display line count (accounts for multiline formatted names)
-    local display_lines = 0
-    local float_buffers = get_ordered_buffers()
-    for _, bufnr in ipairs(float_buffers) do
-      if state.config.format_file_name then
-        local name = get_buffer_name(bufnr, float_buffers)
-        local filepath = vim.api.nvim_buf_get_name(bufnr)
-        local display_name = state.config.format_file_name(filepath, name)
-        display_lines = display_lines + #vim.split(display_name, "\n", { plain = true })
-      else
-        display_lines = display_lines + 1
-      end
-    end
+    -- Display line count (accounts for multiline formatted names)
+    local display_lines = #build_layout().lines
     local height = math.min(20, display_lines)
 
     local ui = vim.api.nvim_list_uis()[1]
@@ -740,6 +791,12 @@ local function create_window(position)
     })
   end
 
+  vim.api.nvim_create_autocmd("CursorMoved", {
+    group = vim.api.nvim_create_augroup("BuffersCursorRow", { clear = true }),
+    buffer = state.buf,
+    callback = highlight_cursor_row,
+  })
+
   -- U marks the agent under the cursor unread
   vim.api.nvim_buf_set_keymap(state.buf, "n", "U", "", {
     callback = function() M.mark_unread() end,
@@ -782,6 +839,7 @@ end
 -- Public functions
 ---@param position string|nil Position for the buffer window ("left", "right", or "float")
 function M.show(position)
+  priority.refresh()
   if state.win and vim.api.nvim_win_is_valid(state.win) then
     vim.api.nvim_set_current_win(state.win)
     render()
@@ -910,56 +968,62 @@ function M.previous()
   end
 end
 
-function M.movePrev()
-  local buffers = get_ordered_buffers()
+-- Swap the current buffer's row with its neighbor `delta` rows away, when
+-- both are file rows, or both agent rows of equal priority (the sort decides
+-- everything else). The swap is made in buffer_order, which breaks ties.
+local function move(delta)
+  local buffers, info = get_ordered_buffers()
   if #buffers <= 1 then
     return
   end
 
   local current_bufnr = vim.api.nvim_get_current_buf()
-  local current_index = nil
-
-  -- Find current buffer index in buffer_order
-  for i, bufnr in ipairs(state.buffer_order) do
+  local index
+  for i, bufnr in ipairs(buffers) do
     if bufnr == current_bufnr then
-      current_index = i
+      index = i
       break
     end
   end
-
-  if current_index and current_index > 1 then
-    -- Move current buffer one position up (towards beginning)
-    local buffer_to_move = state.buffer_order[current_index]
-    table.remove(state.buffer_order, current_index)
-    table.insert(state.buffer_order, current_index - 1, buffer_to_move)
-    render()
+  local neighbor = index and buffers[index + delta]
+  if not neighbor then
+    return
   end
+  local a, b = info[current_bufnr], info[neighbor]
+  if (a == nil) ~= (b == nil) or (a and priority.before(a.key, b.key) ~= nil) then
+    return
+  end
+
+  local pos = {}
+  for i, bufnr in ipairs(state.buffer_order) do
+    pos[bufnr] = i
+  end
+  local i, j = pos[current_bufnr], pos[neighbor]
+  state.buffer_order[i], state.buffer_order[j] = neighbor, current_bufnr
+  render()
+end
+
+function M.movePrev()
+  move(-1)
 end
 
 function M.moveNext()
-  local buffers = get_ordered_buffers()
-  if #buffers <= 1 then
+  move(1)
+end
+
+-- Focus the unread cc.nvim agent of highest priority (then unread longest)
+-- the way the buffers list opens a row. Waits briefly for a fresh priority
+-- fetch, and falls back to the cached one.
+function M.focus_next()
+  priority.refresh()
+  priority.wait(400)
+  local inst = priority.pick_unread(list_instances())
+  if not inst then
+    vim.notify("Nothing unread")
     return
   end
-
-  local current_bufnr = vim.api.nvim_get_current_buf()
-  local current_index = nil
-
-  -- Find current buffer index in buffer_order
-  for i, bufnr in ipairs(state.buffer_order) do
-    if bufnr == current_bufnr then
-      current_index = i
-      break
-    end
-  end
-
-  if current_index and current_index < #state.buffer_order then
-    -- Move current buffer one position down (towards end)
-    local buffer_to_move = state.buffer_order[current_index]
-    table.remove(state.buffer_order, current_index)
-    table.insert(state.buffer_order, current_index + 1, buffer_to_move)
-    render()
-  end
+  switch_to_buffer(inst.outputBufnr)
+  render()
 end
 
 ---@param config BuffersConfig|nil
@@ -988,6 +1052,15 @@ function M.setup(config)
       state.config.format_file_name = config.format_file_name
     end
   end
+
+  priority.setup({
+    cmd = config and config.priority_cmd,
+    on_change = function()
+      if state.win and vim.api.nvim_win_is_valid(state.win) then
+        render()
+      end
+    end,
+  })
 
   setup_highlights()
 
@@ -1027,6 +1100,10 @@ function M.setup(config)
     desc = "Mark the selected cc.nvim agent unread until next viewed"
   })
 
+  vim.api.nvim_create_user_command("FocusNext", M.focus_next, {
+    desc = "Focus the highest-priority unread cc.nvim agent"
+  })
+
   vim.api.nvim_create_user_command("BuffersNext", M.next, {
     desc = "Navigate to next buffer"
   })
@@ -1062,7 +1139,16 @@ function M.setup(config)
       if state.win and vim.api.nvim_win_is_valid(state.win) then
         render()
       end
+      if get_agents()[args.buf] then
+        priority.refresh()
+      end
     end
+  })
+
+  -- Priorities may have changed outside Neovim (e.g. a project re-tagged)
+  vim.api.nvim_create_autocmd("FocusGained", {
+    group = group,
+    callback = priority.refresh
   })
 
   -- Update on buffer changes
@@ -1129,8 +1215,9 @@ function M.setup(config)
     end
   })
 
-  -- Re-render when a cc.nvim agent changes state. Every render reads all
-  -- agent states fresh, so any render also corrects a missed event.
+  -- Re-render when a cc.nvim agent changes state, and refetch priorities (a
+  -- new session may be tagged). Every render reads all agent states fresh,
+  -- so any render also corrects a missed event.
   vim.api.nvim_create_autocmd("User", {
     group = group,
     pattern = "CcStateChanged",
@@ -1138,6 +1225,7 @@ function M.setup(config)
       if state.win and vim.api.nvim_win_is_valid(state.win) then
         render()
       end
+      priority.refresh()
     end
   })
 
