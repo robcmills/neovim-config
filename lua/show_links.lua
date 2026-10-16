@@ -152,7 +152,8 @@ function M.label(win)
     if i > #M.LABELS then break end
     t.label = M.LABELS:sub(i, i)
     vim.api.nvim_buf_set_extmark(buf, ns, t.lnum - 1, t.s, {
-      virt_text = { { t.label, 'ShowLinksLabel' } },
+      -- A space between label and link, so the label never reads as part of it
+      virt_text = { { t.label, 'ShowLinksLabel' }, { ' ' } },
       virt_text_pos = 'inline',
       priority = 1000,
     })

@@ -160,6 +160,23 @@ test('labels: visible lines only, reading order, before each match', function()
   sl.clear()
   eq(marks(out), {})
 end)
+test('labels: own cells left of the link, a space between, wide chars and column 0', function()
+  local out, _, out_win = cc_layout({ 'https://a.io x', '日本 RAD-1 é #2' })
+  vim.api.nvim_win_call(out_win, function() vim.wo.number = false end)
+  sl.label(out_win)
+  vim.cmd('redraw')
+  local pos = vim.fn.win_screenpos(out_win)
+  local function cells(r, n)
+    local t = {}
+    for c = 0, n - 1 do t[#t + 1] = vim.fn.screenstring(pos[1] + r, pos[2] + c) end
+    return t
+  end
+  eq(cells(0, 9), { 'a', ' ', 'h', 't', 't', 'p', 's', ':', '/' })
+  eq(cells(1, 16), { '日', '', '本', '', ' ', 'b', ' ', 'R', 'A', 'D', '-', '1', ' ', 'é', ' ', 'c' })
+  eq(cells(1, 19)[17], ' ')
+  eq(cells(1, 19)[18], '#')
+  sl.clear()
+end)
 test('labels: closed folds hide their links', function()
   local lines = {}
   for i = 1, 8 do lines[i] = ('RAD-%d'):format(i) end
