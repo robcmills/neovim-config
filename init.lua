@@ -136,50 +136,10 @@ end
 
 vim.keymap.set('n', '!', toggle_boolean, { desc = 'Toggle Boolean' })
 
--- Find the match of `pattern` on the current line that contains the cursor.
--- Returns the matched text, or nil.
-local function match_under_cursor(pattern)
-  local line = vim.api.nvim_get_current_line()
-  local col = vim.fn.col('.')
-  local start = 0
-  while true do
-    local match, s, e = unpack(vim.fn.matchstrpos(line, pattern, start))
-    if s == -1 then return nil end
-    if col > s and col <= e then return match end
-    start = e
-  end
-end
-
--- Opens the url under the cursor in Brave. Also recognizes bare references
--- like `RAD-15317` (Jira) and `#12567` / `PR 12567` (openspace PR).
-local function open_url_in_brave()
-  local url = match_under_cursor([=[\vhttps?://[^[:space:]<>"'`)\]]+]=])
-  if url then
-    url = url:gsub('[.,;:]+$', '')
-  end
-
-  if not url then
-    local key = match_under_cursor([=[\v<[A-Z][A-Z0-9]+-\d+>]=])
-    if key then
-      url = 'https://openspaceai.atlassian.net/browse/' .. key
-    end
-  end
-
-  if not url then
-    local ref = match_under_cursor([=[\v\c<%(PR|pull request)>\s*#?\d+|#\d+]=])
-    if ref then
-      url = 'https://github.com/openspacelabs/openspace/pull/' .. ref:match('%d+$')
-    end
-  end
-
-  if not url then
-    vim.notify('No url, Jira key, or PR number under cursor', vim.log.levels.WARN)
-    return
-  end
-  vim.fn.jobstart({ 'open', '-a', 'Brave Browser', url }, { detach = true })
-end
-
-vim.keymap.set('n', 'gu', open_url_in_brave, { desc = 'Open url under cursor in Brave' })
+-- `gu` opens the url, Jira key (`RAD-15317`), or PR ref (`#12567`,
+-- `PR 12567`) under the cursor in Brave; :ShowLinks / `gl` labels every one
+-- on screen.
+require('show_links').setup()
 
 -- terminal
 vim.opt.scrollback = 5000
