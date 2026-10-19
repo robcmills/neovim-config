@@ -45,6 +45,8 @@ The cursor in the buffers window sits on the current buffer's row after every
 render, unless the buffers window itself is focused, where it stays on the
 row of the buffer it was on.
 
+The buffers window sets 'winfixbuf', so no other buffer can be opened in it.
+
 :FocusNext focuses the highest-priority unread agent in this Neovim
 (level, then effective priority, then unread longest). With nothing unread
 it focuses the top agent row.
@@ -67,7 +69,6 @@ The code is as simple and minimal as possible.
 
 ## TODO:
 
-- bug: disallow opening any file in the buffers window (gets into bad state)
 - bug: solve shortcuts when length of buffers list is greater than available keys
     i.e double letter shortcuts don't work because "ab" just jumps to "a" on first keypress
 - enhancement: enable arbitrary edits to buffers list and reconcile (oil.nvim) ?
@@ -526,9 +527,25 @@ local function get_effective_width()
   end
 end
 
+-- The window showing the buffers list, or nil when it is hidden. Another
+-- buffer can be loaded into the list's window (cc.nvim stages a new session
+-- in the current window), so check what state.win shows, and follow the list
+-- if it has moved to another window.
+local function list_win()
+  if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
+    return nil
+  end
+  if not (state.win and vim.api.nvim_win_is_valid(state.win)
+      and vim.api.nvim_win_get_buf(state.win) == state.buf) then
+    local win = vim.fn.bufwinid(state.buf)
+    state.win = win ~= -1 and win or nil
+  end
+  return state.win
+end
+
 -- Put the buffers window cursor on `bufnr`'s row
 local function move_cursor_to_buffer(bufnr)
-  if not state.win or not vim.api.nvim_win_is_valid(state.win) then
+  if not list_win() then
     return
   end
   local first_line = bufnr and state.buf_first_lines[bufnr]
@@ -539,7 +556,7 @@ end
 
 -- The buffer whose row is under the buffers window cursor
 local function buffer_under_cursor()
-  if not state.win or not vim.api.nvim_win_is_valid(state.win) or not state.line_bufs then
+  if not list_win() or not state.line_bufs then
     return nil
   end
   return state.line_bufs[vim.api.nvim_win_get_cursor(state.win)[1]]
@@ -572,8 +589,7 @@ local function render()
 
   -- With the buffers window focused, the cursor follows the buffer it was on
   -- through a re-sort; otherwise it goes to the current buffer's row
-  local sidebar_focused = state.win and vim.api.nvim_win_is_valid(state.win)
-    and vim.api.nvim_get_current_win() == state.win
+  local sidebar_focused = list_win() == vim.api.nvim_get_current_win()
   local cursor_bufnr = sidebar_focused and buffer_under_cursor() or nil
 
   local layout = build_layout()
@@ -664,7 +680,7 @@ local function render()
   end
 
   -- Update window width if auto width is enabled
-  if state.config.width == 'auto' and state.win and vim.api.nvim_win_is_valid(state.win) then
+  if state.config.width == 'auto' and list_win() then
     vim.api.nvim_win_set_width(state.win, layout.width)
   end
 
@@ -674,7 +690,7 @@ end
 
 -- Create buffer window
 local function create_window(position)
-  if state.win and vim.api.nvim_win_is_valid(state.win) then
+  if list_win() then
     return
   end
 
@@ -750,6 +766,8 @@ local function create_window(position)
   vim.wo[state.win].foldcolumn = "0"
   vim.wo[state.win].list = false
   vim.wo[state.win].wrap = false
+  -- No other buffer can be opened in the buffers window
+  vim.wo[state.win].winfixbuf = true
 
   -- Set up keymaps for navigation
   for i = 1, 26 do
@@ -790,7 +808,7 @@ local function create_window(position)
               end
               vim.api.nvim_set_current_buf(target_bufnr)
               -- Restore buffers window width
-              if state.win and vim.api.nvim_win_is_valid(state.win) then
+              if list_win() then
                 vim.api.nvim_win_set_width(state.win, get_effective_width())
               end
             end
@@ -851,7 +869,7 @@ end
 ---@param position string|nil Position for the buffer window ("left", "right", or "float")
 function M.show(position)
   priority.refresh()
-  if state.win and vim.api.nvim_win_is_valid(state.win) then
+  if list_win() then
     vim.api.nvim_set_current_win(state.win)
     render()
   else
@@ -875,7 +893,7 @@ function M.mark_unread()
 end
 
 function M.hide()
-  if state.win and vim.api.nvim_win_is_valid(state.win) then
+  if list_win() then
     vim.api.nvim_win_close(state.win, true)
     state.win = nil
   end
@@ -930,7 +948,7 @@ local function switch_to_buffer(target_bufnr)
     vim.cmd("rightbelow vsplit")
   end
   vim.api.nvim_set_current_buf(target_bufnr)
-  if state.win and vim.api.nvim_win_is_valid(state.win) then
+  if list_win() then
     vim.api.nvim_win_set_width(state.win, get_effective_width())
   end
 end
@@ -1081,7 +1099,7 @@ function M.setup(config)
   priority.setup({
     cmd = config and config.priority_cmd,
     on_change = function()
-      if state.win and vim.api.nvim_win_is_valid(state.win) then
+      if list_win() then
         render()
       end
     end,
@@ -1161,7 +1179,7 @@ function M.setup(config)
     group = group,
     callback = function(args)
       update_focus_order(args.buf)
-      if state.win and vim.api.nvim_win_is_valid(state.win) then
+      if list_win() then
         render()
       end
       if get_agents()[args.buf] then
@@ -1180,7 +1198,7 @@ function M.setup(config)
   vim.api.nvim_create_autocmd({"BufDelete", "BufWipeout"}, {
     group = group,
     callback = function(e)
-      if state.win and vim.api.nvim_win_is_valid(state.win) then
+      if list_win() then
         -- remove deleted buffer from buffer_order
         for i, buf in ipairs(state.buffer_order) do
           if buf == e.buf then
@@ -1204,7 +1222,7 @@ function M.setup(config)
   vim.api.nvim_create_autocmd("DiagnosticChanged", {
     group = group,
     callback = function()
-      if state.win and vim.api.nvim_win_is_valid(state.win) then
+      if list_win() then
         vim.defer_fn(render, 10)
       end
     end
@@ -1214,7 +1232,7 @@ function M.setup(config)
   vim.api.nvim_create_autocmd("BufModifiedSet", {
     group = group,
     callback = function()
-      if state.win and vim.api.nvim_win_is_valid(state.win) then
+      if list_win() then
         render()
       end
     end
@@ -1224,7 +1242,7 @@ function M.setup(config)
   vim.api.nvim_create_autocmd("TermOpen", {
     group = group,
     callback = function()
-      if state.win and vim.api.nvim_win_is_valid(state.win) then
+      if list_win() then
         vim.defer_fn(render, 10)
       end
     end
@@ -1234,7 +1252,7 @@ function M.setup(config)
   vim.api.nvim_create_autocmd("BufFilePost", {
     group = group,
     callback = function()
-      if state.win and vim.api.nvim_win_is_valid(state.win) then
+      if list_win() then
         render()
       end
     end
@@ -1247,7 +1265,7 @@ function M.setup(config)
     group = group,
     pattern = "CcStateChanged",
     callback = function()
-      if state.win and vim.api.nvim_win_is_valid(state.win) then
+      if list_win() then
         render()
       end
       priority.refresh()
@@ -1258,7 +1276,7 @@ function M.setup(config)
   vim.api.nvim_create_autocmd("BufAdd", {
     group = group,
     callback = function()
-      if state.win and vim.api.nvim_win_is_valid(state.win) then
+      if list_win() then
         vim.defer_fn(render, 10)
       end
     end

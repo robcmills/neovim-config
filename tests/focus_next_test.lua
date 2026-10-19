@@ -240,6 +240,36 @@ test('movePrev/moveNext: files reorder, agents only among equal priority', funct
   eq({ unpack(names(), 3, 5) }, { 'a-very-long-session-name-that-clips-in-the-sidebar', 'interrupt-retry', 'voice-workflow-hud' })
 end)
 
+test('no other buffer opens in the sidebar window', function()
+  local sidebar = vim.fn.bufnr('VerticalBuffersList')
+  local win = vim.fn.win_findbuf(sidebar)[1]
+  local ok, err = pcall(vim.api.nvim_win_set_buf, win, vim.fn.bufnr(vim.fn.expand('~/.config/nvim/init.lua')))
+  eq(ok, false)
+  assert(tostring(err):find('E1513', 1, true), err)
+  eq(vim.api.nvim_win_get_buf(win), sidebar)
+end)
+
+test('another buffer loaded into the sidebar window: no render errors, BuffersShow reopens', function()
+  local sidebar = vim.fn.bufnr('VerticalBuffersList')
+  vim.api.nvim_set_current_win(vim.fn.win_findbuf(sidebar)[1])
+  -- With 'winfixbuf' turned off, what cc.nvim did when a session opened with
+  -- the sidebar focused: stage a one-line buffer in the current window, then
+  -- enter the session's output
+  vim.wo.winfixbuf = false
+  local scratch = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_set_current_buf(scratch)
+  local inst = fixture.by_name('colemak')
+  vim.api.nvim_set_current_buf(inst.outputBufnr)
+  eq(vim.fn.win_findbuf(sidebar), {})
+  vim.cmd('BuffersShow')
+  eq(#vim.fn.win_findbuf(sidebar), 1)
+  vim.cmd('wincmd p')
+  eq(vim.api.nvim_get_current_buf(), inst.outputBufnr)
+  local text = vim.api.nvim_buf_get_lines(sidebar, cursor_buf() - 1, cursor_buf(), false)
+  assert(text[1]:find(inst.name, 1, true), 'cursor not on current row: ' .. vim.inspect(text))
+  vim.api.nvim_buf_delete(scratch, { force = true })
+end)
+
 test('refresh coalesces a burst into one fetch', function()
   local calls = 0
   local system = vim.system
