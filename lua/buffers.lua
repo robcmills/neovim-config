@@ -30,7 +30,7 @@ and the order is modifiable by the user to manually reorder them. Manual
 reordering moves a row only past a neighbor in its own group (and, for
 agents, of equal priority).
 
-Agent rows show the agent's status emoji in the icon column instead of a
+Agent rows show the agent's colored status icon in the icon column instead of a
 devicon, and the session name (the buffer name until cc.nvim names the
 session), colored by level in rainbow order: orange, yellow, cyan, light
 blue, gray, and a dimmer gray for unknown (`priority_colors`).
@@ -240,6 +240,24 @@ local function priority_hl(level, current)
   return "BuffersPriority" .. (level or "Unknown")
 end
 
+-- Status icons for cc.nvim agent buffers, keyed by cc.nvim instance state.
+-- Single-cell Nerd Font glyphs, so agent rows align with devicon rows.
+local AGENT_STATUS_ICONS = {
+  waiting = { icon = "󰹇", color = "#f0a85a" },      -- md-hand_back_right
+  interrupting = { icon = "󰏃", color = "#f04848" }, -- md-octagon
+  working = { icon = "󱌢", color = "#e8c547" },      -- md-hammer_wrench
+  delegating = { icon = "", color = "#c678dd" },   -- fa-sitemap
+  monitoring = { icon = "", color = "#56b6c2" },   -- fa-heartbeat
+  unread = { icon = "󰇮", color = "#61afef" },       -- md-email
+  starting = { icon = "󰹦", color = "#a8d08d" },     -- md-sprout
+  ready = { icon = "", color = "#5fd35f" },        -- fa-circle
+  exited = { icon = "󰚌", color = "#7f848e" },       -- md-skull
+}
+
+local function status_hl(agent_state)
+  return "BuffersStatus_" .. agent_state
+end
+
 -- Set up highlight groups for buffer colors
 local function setup_highlights()
   vim.api.nvim_set_hl(0, "BuffersActive", state.config.colors.active)
@@ -253,24 +271,14 @@ local function setup_highlights()
   end
   vim.api.nvim_set_hl(0, priority_hl(nil), { fg = colors.unknown })
   vim.api.nvim_set_hl(0, priority_hl(nil, true), { fg = colors.current, bold = true })
+  for agent_state, entry in pairs(AGENT_STATUS_ICONS) do
+    vim.api.nvim_set_hl(0, status_hl(agent_state), { fg = entry.color })
+  end
 end
 
 local function setup_icons()
   require("nvim-web-devicons").setup(state.config.icons)
 end
-
--- Status emoji for cc.nvim agent buffers, keyed by cc.nvim instance state
-local AGENT_STATUS_ICONS = {
-  waiting = "✋",
-  interrupting = "🛑",
-  working = "🚧",
-  delegating = "🚸",
-  monitoring = "📡",
-  unread = "📬",
-  starting = "🌱",
-  ready = "🟢",
-  exited = "💀",
-}
 
 local function list_instances()
   local cc = package.loaded["cc"]
@@ -412,8 +420,8 @@ local function get_active_row(buffers, agents)
 end
 
 -- Lay out every row: its lines, the byte columns of its icon and name, and
--- the width the window needs. The icon column is as wide as the widest icon
--- (status emoji take two cells, devicons one), so names align on every row.
+-- the width the window needs. The icon column is as wide as the widest icon,
+-- so names align on every row.
 local function build_layout()
   local agents = get_agents()
   local buffers, info = get_ordered_buffers(agents)
@@ -445,7 +453,12 @@ local function build_layout()
     local name = get_buffer_name(bufnr, buffers)
     local icon, icon_hl
     if agents[bufnr] then
-      icon = AGENT_STATUS_ICONS[agents[bufnr].state] or ""
+      local status = AGENT_STATUS_ICONS[agents[bufnr].state]
+      if status then
+        icon, icon_hl = status.icon, status_hl(agents[bufnr].state)
+      else
+        icon = ""
+      end
     else
       icon, icon_hl = get_devicon(name, bufnr)
     end

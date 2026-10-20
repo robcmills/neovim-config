@@ -124,14 +124,17 @@ test('sidebar: names start in the same display column on every line', function()
     local text = line:match('^%S') and line:match('^%S+%s+%S+%s+()') or line:match('^%s+()')
     cols[vim.fn.strdisplaywidth(line:sub(1, text - 1))] = true
   end
-  eq(vim.tbl_keys(cols), { 5 })
+  eq(vim.tbl_keys(cols), { 4 })
 end)
 
-test('sidebar: agent rows carry the status emoji, no devicon, no name prefix', function()
+test('sidebar: agent rows carry a colored one-cell status icon, no devicon, no name prefix', function()
   local r = rows()
-  eq(r[1]:match('^%S+ (%S+)'), '🚧')
-  eq(r[2]:match('^%S+ (%S+)'), '📬')
-  eq(vim.fn.strdisplaywidth(r[1]), vim.fn.strdisplaywidth('a 🚧 estimation-publish'))
+  eq(r[1]:match('^%S+ (%S+)'), '󱌢')
+  eq(r[2]:match('^%S+ (%S+)'), '󰇮')
+  eq(vim.fn.strdisplaywidth(r[1]), vim.fn.strdisplaywidth('a x estimation-publish'))
+  local buf = vim.fn.bufnr('VerticalBuffersList')
+  local marks = vim.api.nvim_buf_get_extmarks(buf, -1, { 0, 2 }, { 0, 2 }, { details = true })
+  eq(vim.tbl_contains(vim.tbl_map(function(m) return m[4].hl_group end, marks), 'BuffersStatus_working'), true)
 end)
 
 local function hl_at(line, col)
