@@ -170,7 +170,7 @@ local function cursor_buf()
   return line
 end
 
-test('FocusNext: unread by level, then the top row', function()
+test('FocusNext: unread by level, then cycle the ready rows', function()
   local order = {}
   for _ = 1, 5 do
     vim.cmd('FocusNext')
@@ -189,17 +189,55 @@ test('FocusNext: unread by level, then the top row', function()
   local notes = {}
   local notify = vim.notify
   vim.notify = function(msg) table.insert(notes, msg) end
-  -- Nothing unread: the top agent row, then stay there
+  -- Nothing unread: cycle the ready rows in sidebar order, wrapping
+  local function current_name()
+    for _, i in ipairs(fixture.instances) do
+      if i.outputBufnr == vim.api.nvim_get_current_buf() or i.promptBufnr == vim.api.nvim_get_current_buf() then
+        return i.name
+      end
+    end
+  end
+  local ready = {}
+  for _, row in ipairs(names()) do
+    local inst = fixture.by_name(row)
+    if inst and inst.state == 'ready' then table.insert(ready, inst.name) end
+  end
+  eq(#ready, 7)
+  -- From a non-ready row: the first ready row
+  vim.api.nvim_set_current_buf(fixture.by_name('estimation-publish').outputBufnr)
+  local cycle = {}
+  for _ = 1, #ready + 1 do
+    vim.cmd('FocusNext')
+    table.insert(cycle, current_name())
+  end
+  eq(cycle, vim.list_extend(vim.deepcopy(ready), { ready[1] }))
+  eq(notes[1], 'Nothing unread; ready 1/7')
+  eq(notes[#ready + 1], 'Nothing unread; ready 1/7')
+  -- From a ready agent's prompt buffer, its row counts as current
+  vim.api.nvim_set_current_buf(fixture.by_name(ready[3]).promptBufnr)
   vim.cmd('FocusNext')
-  eq(vim.api.nvim_get_current_buf(), fixture.by_name('estimation-publish').outputBufnr)
-  eq(notes, {})
+  eq(current_name(), ready[4])
+  -- An agent turning unread mid-cycle comes first, then the cycle resumes below it
+  fixture.by_name(ready[6]).state = 'unread'
   vim.cmd('FocusNext')
-  eq(notes, { 'Nothing unread; already on top' })
-  eq(vim.api.nvim_get_current_buf(), fixture.by_name('estimation-publish').outputBufnr)
-  -- From its prompt buffer, the top row counts as current too
-  vim.api.nvim_set_current_buf(fixture.by_name('estimation-publish').promptBufnr)
+  eq(current_name(), ready[6])
   vim.cmd('FocusNext')
-  eq(notes[2], 'Nothing unread; already on top')
+  eq(current_name(), ready[7])
+  -- One ready agent, already on it: stay and say so
+  local saved = {}
+  for _, i in ipairs(fixture.instances) do
+    saved[i] = i.state
+    if i.state == 'ready' and i.name ~= ready[7] then i.state = 'working' end
+  end
+  vim.cmd('FocusNext')
+  eq(notes[#notes], 'Nothing unread; the only ready agent')
+  eq(current_name(), ready[7])
+  -- No ready agents
+  for i in pairs(saved) do if i.state == 'ready' then i.state = 'working' end end
+  vim.cmd('FocusNext')
+  eq(notes[#notes], 'Nothing unread or ready')
+  eq(current_name(), ready[7])
+  for i, st in pairs(saved) do i.state = st end
   -- No agents at all
   local instances = fixture.instances
   fixture.instances = {}
@@ -207,7 +245,7 @@ test('FocusNext: unread by level, then the top row', function()
   vim.cmd('FocusNext')
   fixture.instances = instances
   vim.notify = notify
-  eq(notes[3], 'Nothing unread')
+  eq(notes[#notes], 'Nothing unread or ready')
   eq(vim.api.nvim_get_current_buf(), before)
 end)
 

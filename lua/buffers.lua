@@ -49,7 +49,8 @@ The buffers window sets 'winfixbuf', so no other buffer can be opened in it.
 
 :FocusNext focuses the highest-priority unread agent in this Neovim
 (level, then effective priority, then unread longest). With nothing unread
-it focuses the top agent row.
+it cycles the ready agents in sidebar order: from a ready row it goes to the
+next one down, wrapping to the first; from anywhere else, to the first.
 
 Buffers window width is configurable to either a fixed width or auto,
 with min and max width configurable settings.
@@ -130,7 +131,7 @@ Usage:
 - :BuffersShowFloat - Show buffer list in a floating window
 - :BuffersMarkUnread - Mark the cc.nvim agent under the cursor (or the current
   buffer) unread until next viewed; `U` in the buffers window does the same
-- :FocusNext - Focus the highest-priority unread cc.nvim agent, else the top one
+- :FocusNext - Focus the highest-priority unread cc.nvim agent, else the next ready one
 
 ]]
 
@@ -1054,9 +1055,11 @@ function M.moveNext()
 end
 
 -- Focus the unread cc.nvim agent of highest priority (then unread longest)
--- the way the buffers list opens a row. With nothing unread, focus the top
--- agent row instead. Waits briefly for a fresh priority fetch, and falls
--- back to the cached one.
+-- the way the buffers list opens a row. With nothing unread, cycle the ready
+-- agent rows in sidebar order: from a ready row, the next one down (wrapping
+-- to the first); from anywhere else, the first. The current row is the only
+-- state, so repeated calls walk the list. Waits briefly for a fresh priority
+-- fetch, and falls back to the cached one.
 function M.focus_next()
   priority.refresh()
   priority.wait(400)
@@ -1064,16 +1067,31 @@ function M.focus_next()
   local target = inst and inst.outputBufnr
   if not target then
     local agents = get_agents()
-    local buffers, info = get_ordered_buffers(agents)
-    if not info[buffers[1]] then
-      vim.notify("Nothing unread")
+    local buffers = get_ordered_buffers(agents)
+    local ready = {}
+    for _, bufnr in ipairs(buffers) do
+      if agents[bufnr] and agents[bufnr].state == "ready" then
+        table.insert(ready, bufnr)
+      end
+    end
+    if #ready == 0 then
+      vim.notify("Nothing unread or ready")
       return
     end
-    target = buffers[1]
-    if get_active_row(buffers, agents) == target then
-      vim.notify("Nothing unread; already on top")
+    local active = get_active_row(buffers, agents)
+    local index = 1
+    for i, bufnr in ipairs(ready) do
+      if bufnr == active then
+        index = i % #ready + 1
+        break
+      end
+    end
+    target = ready[index]
+    if target == active then
+      vim.notify("Nothing unread; the only ready agent")
       return
     end
+    vim.notify(("Nothing unread; ready %d/%d"):format(index, #ready))
   end
   switch_to_buffer(target)
   render()
@@ -1157,7 +1175,7 @@ function M.setup(config)
   })
 
   vim.api.nvim_create_user_command("FocusNext", M.focus_next, {
-    desc = "Focus the highest-priority unread cc.nvim agent, else the top one"
+    desc = "Focus the highest-priority unread cc.nvim agent, else the next ready one"
   })
 
   vim.api.nvim_create_user_command("BuffersNext", M.next, {
