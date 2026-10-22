@@ -401,13 +401,19 @@ end
 
 -- The row the current buffer belongs to: the current buffer, or else the
 -- most recently focused buffer that has a row. An agent's prompt buffer maps
--- to its output buffer's row.
+-- to its output buffer's row. Inside Neovim's autocmd window (a hidden
+-- buffer renamed or edited in the background, as cc.nvim does for a chat
+-- opened with focus=false) the current buffer is not where Rob is, so only
+-- the focus order counts there.
 local function get_active_row(buffers, agents)
   local rows = {}
   for _, bufnr in ipairs(buffers) do
     rows[bufnr] = true
   end
-  local candidates = { vim.api.nvim_get_current_buf() }
+  local candidates = {}
+  if vim.fn.win_gettype() ~= "autocmd" then
+    candidates[1] = vim.api.nvim_get_current_buf()
+  end
   vim.list_extend(candidates, state.focus_order)
   for _, bufnr in ipairs(candidates) do
     if rows[bufnr] then
@@ -871,11 +877,15 @@ local function create_window(position)
   render()
 end
 
--- Track new buffers
+-- Track new buffers. A new buffer goes last in the focus order: letters
+-- follow real focus (BufEnter), so one created in the background doesn't
+-- take "a".
 local function track_buffer(bufnr)
   if not vim.tbl_contains(state.buffer_order, bufnr) then
     table.insert(state.buffer_order, bufnr)
-    update_focus_order(bufnr)
+    if not vim.tbl_contains(state.focus_order, bufnr) then
+      table.insert(state.focus_order, bufnr)
+    end
   end
 end
 
