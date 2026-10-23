@@ -774,6 +774,9 @@ do
   })
 end
 
+-- Open `agents -i` popups reload when an agent's state changes.
+pcall(dofile, vim.fn.expand('~/.config/agents/src/picker-notify.lua'))
+
 vim.keymap.set('n', '<leader>gmv', function()
   vim.cmd('Git merge development')
 end, { desc = 'Git merge development' })
