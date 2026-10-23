@@ -777,6 +777,9 @@ end
 -- Open `agents -i` popups reload when an agent's state changes.
 pcall(dofile, vim.fn.expand('~/.config/agents/src/picker-notify.lua'))
 
+-- Block idle sleep while any cc.nvim instance here is busy (jarvis docs/decisions.md, 2026-10-23).
+pcall(dofile, vim.fn.expand('~/jarvis/scripts/sleep-guard.lua'))
+
 vim.keymap.set('n', '<leader>gmv', function()
   vim.cmd('Git merge development')
 end, { desc = 'Git merge development' })
