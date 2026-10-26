@@ -143,19 +143,30 @@ end
 
 -- setup servers
 
+-- Language servers only run when nvim starts under ~/src, where code lives.
+-- Other windows (e.g. Jarvis in ~/jarvis) never start them.
+local src_dir = vim.fn.expand('~/src')
+local cwd = vim.fn.getcwd()
+local lsp_allowed = cwd == src_dir or vim.startswith(cwd, src_dir .. '/')
+local function enable_server(name)
+  if lsp_allowed then
+    vim.lsp.enable(name)
+  end
+end
+
 -- vim.lsp.config.eslint = {}
-vim.lsp.enable('eslint')
+enable_server('eslint')
 
 -- vim.lsp.config.jsonls = {}
-vim.lsp.enable('jsonls')
+enable_server('jsonls')
 
 -- vim.lsp.config.sqlls = {}
-vim.lsp.enable('sqlls')
+enable_server('sqlls')
 
 vim.lsp.config.clangd = {
   on_attach = on_attach,
 }
-vim.lsp.enable('clangd')
+enable_server('clangd')
 
 
 -- pico-8
@@ -169,7 +180,7 @@ vim.lsp.config.pico8_ls = {
   filetypes = { 'pico8', 'p8' },
   on_attach = on_attach,
 }
-vim.lsp.enable('pico8_ls')
+enable_server('pico8_ls')
 
 
 -- lua
@@ -209,7 +220,7 @@ vim.lsp.config.lua_ls = {
     },
   },
 }
-vim.lsp.enable('lua_ls')
+enable_server('lua_ls')
 
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "lua",
@@ -242,7 +253,7 @@ vim.lsp.config.ts_ls = {
   },
   on_attach = on_attach,
 }
-vim.lsp.enable('ts_ls')
+enable_server('ts_ls')
 
 
 -- deno config
@@ -263,7 +274,7 @@ capabilities.textDocument.completion.completionItem.snippetSupport = true
 vim.lsp.config.cssls = {
   capabilities = capabilities
 }
-vim.lsp.enable('cssls')
+enable_server('cssls')
 
 
 -- diagnostics
