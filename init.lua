@@ -702,13 +702,15 @@ require('cc').setup({
     {
       after = (vim.g.cc_permission_timeouts or {})[2] or 900,
       callback = function(event)
-        event.resolve('deny', 'Approval timeout. Attempt to work around safely, else continue other work and report this denial.')
+        event.resolve('deny', 'Approval timeout: Rob did not answer in 17 minutes. Remote Control stays on, so he can still reply from his phone. Work around it safely or continue other work; if nothing else can move, end your turn with one line saying exactly what you need approved, and retry when he replies. Report this denial.')
       end,
     },
   },
-  -- Turn Remote Control back off so the next prompt gets the 2-minute grace.
+  -- Turn Remote Control back off so the next prompt gets the 2-minute grace,
+  -- except after a timeout: then Rob may still answer from his phone, and the
+  -- agent shows `waiting` until he does (cc.nvim `blocked`).
   on_permission_resolved = function(event)
-    if event.remote_enabled_by_stage then event.disable_remote() end
+    if event.remote_enabled_by_stage and not event.timed_out then event.disable_remote() end
   end,
   prompt_placeholder = 'Enter prompt...',
   provider = 'claude', -- 'claude' | 'codex'
@@ -728,6 +730,58 @@ require('cc').setup({
     },
   },
 })
+
+-- Permission blocks that open no prompt go to ~/.claude/permission-blocked.jsonl,
+-- next to the records the blocked.py hook writes (classifier blocks, trust,
+-- routing) and gate-curl's denies. Classifier blocks are skipped here: the
+-- hook already logged them with the full input.
+do
+  local log_path = vim.fn.expand('~/.claude/permission-blocked.jsonl')
+  local function log_blocked(record)
+    record.timestamp = os.date('!%Y-%m-%dT%H:%M:%SZ')
+    local ok, line = pcall(vim.json.encode, record)
+    local f = ok and io.open(log_path, 'a')
+    if f then f:write(line, '\n'); f:close() end
+  end
+  local function desktop_notify(title, message)
+    if vim.fn.executable('osascript') == 1 then
+      vim.system({ 'osascript', '-e', [[on run argv
+          display notification (item 1 of argv) with title (item 2 of argv)
+        end run]], message, title })
+    end
+  end
+  local group = vim.api.nvim_create_augroup('cc_blocked_notify', { clear = true })
+  vim.api.nvim_create_autocmd('User', {
+    group = group,
+    pattern = 'CcPermissionDenied',
+    callback = function(ev)
+      local d = ev.data or {}
+      if d.decision_reason_type == 'classifier' then return end
+      log_blocked({
+        kind = 'rule', event = 'denied', decision_reason_type = d.decision_reason_type,
+        session_id = d.session_id, session_name = d.session_name, agent_id = d.agent_id,
+        cwd = d.cwd, project = d.cwd and vim.fn.fnamemodify(d.cwd, ':t') or nil,
+        tool = d.tool_name, input = d.input, reason = d.reason, message = d.message,
+      })
+    end,
+  })
+  -- An untrusted workspace: say so on the desktop, and turn Remote Control on
+  -- so the agent's PushNotification (asked for by the blocked.py SessionStart
+  -- hook) reaches Rob's phone. Never accept trust on his behalf.
+  vim.api.nvim_create_autocmd('User', {
+    group = group,
+    pattern = 'CcUntrustedWorkspace',
+    callback = function(ev)
+      local d = ev.data or {}
+      local name = d.session_name or vim.fn.fnamemodify(d.root or '', ':t')
+      log_blocked({ kind = 'untrusted', event = 'stderr', session_name = d.session_name,
+        cwd = d.cwd, root = d.root, fix = d.fix, line = d.line })
+      desktop_notify('cc.nvim: untrusted workspace',
+        name .. ': .claude allow rules ignored. Fix: ' .. (d.fix or ''))
+      require('cc').enable_remote(d.bufnr)
+    end,
+  })
+end
 -- vim.keymap.set('n', '<leader>cc', ':CcToggle<cr>', { desc = 'Toggle cc.nvim' })
 -- vim.keymap.set('n', '<leader>cs', ':CcSend<cr>', { desc = 'Send cc.nvim prompt' })
 -- vim.keymap.set('n', '<leader>cx', ':CcStop<cr>', { desc = 'Stop cc.nvim generation' })
