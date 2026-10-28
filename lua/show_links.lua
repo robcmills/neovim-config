@@ -10,7 +10,8 @@ local M = {}
 M.PATTERNS = {
   url = [=[\vhttps?://[^[:space:]<>"'`)\]]+]=],
   jira = [=[\v<[A-Z][A-Z0-9]+-\d+>]=],
-  pr = [=[\v\c<%(PR|pull request)>\s*#?\d+|#\d+]=],
+  -- `#123`, `repo#123`, `owner/repo#123`, `PR 123`
+  pr = [=[\v\c<%(PR|pull request)>\s*#?\d+|%(<[[:alnum:]_-][[:alnum:]_.-]*/)?%(<[[:alnum:]_-][[:alnum:]_.-]*)?#\d+]=],
 }
 -- Earlier kinds win when matches overlap: a Jira key or #N inside a url is
 -- part of the url.
@@ -28,7 +29,13 @@ function M.resolve(kind, text)
   elseif kind == 'jira' then
     return 'https://openspaceai.atlassian.net/browse/' .. text
   end
-  return 'https://github.com/openspacelabs/openspace/pull/' .. text:match('%d+$')
+  -- A bare repo is an openspacelabs repo; no repo means openspace
+  local repo, num = text:match('([%w_./-]+)#(%d+)$')
+  if not repo then
+    repo, num = 'openspace', text:match('%d+$')
+  end
+  if not repo:find('/') then repo = 'openspacelabs/' .. repo end
+  return 'https://github.com/' .. repo .. '/pull/' .. num
 end
 
 -- Every match of `pattern` in `line`: { text, s, e } with 0-based byte
