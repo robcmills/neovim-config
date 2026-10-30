@@ -652,6 +652,8 @@ vim.keymap.set('n', '=', ':CcNew<cr>', { desc = 'New cc.nvim chat' })
 -- g:cc_nvim_path points a fresh Neovim at a cc.nvim worktree for testing.
 vim.opt.runtimepath:prepend(vim.fn.expand(vim.g.cc_nvim_path or '~/src/cc.nvim'))
 require('cc').setup({
+  -- Highlight the cursor's screen row in the output window (off by default).
+  cursorline = { output = true },
   history_max_records = 1000,
   limits_log = '~/.claude/codex-offload/limits.jsonl',
   on_permission_prompt = function(event)
@@ -720,7 +722,6 @@ require('cc').setup({
       cmd = 'cc',
       effort = 'high', -- 'low' | 'medium' | 'high' | 'xhigh' | 'max' | 'auto'
       model = 'opus', -- TODO: back to 'fable' once Brayden lifts the Fable spend limit
-      permission_mode = 'bypassPermissions',
     },
     codex = {
       approval_policy = 'never',
