@@ -13,7 +13,7 @@ local lsp_client_names = function()
 end
 
 require('feline').setup({
-  disable = { filetypes = { '^NvimTree$', '^neo%-tree$', '^dashboard$', '^Outline$', '^aerial$' } },
+  disable = { filetypes = { '^NvimTree$', '^neo%-tree$', '^dashboard$', '^Outline$', '^aerial$', '^splash$' } },
   components = {
     active = {
       {

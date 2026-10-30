@@ -873,7 +873,7 @@ vim.keymap.set('n', '<F5>', ':!love .<cr>', { desc = 'Run Love2d game' })
 -- ============================================================================
 -- Startup
 -- ============================================================================
--- Default workspace: empty buffer + vertical buffers list
+-- Default workspace: splash screen, buffers list closed
 
 vim.api.nvim_create_autocmd('VimEnter', {
   group = vim.api.nvim_create_augroup('startup', { clear = true }),
@@ -884,15 +884,9 @@ vim.api.nvim_create_autocmd('VimEnter', {
       return
     end
     -- Replace the initial buffer (`nvim .` leaves a directory buffer, since
-    -- netrw is disabled) with a fresh empty one
+    -- netrw is disabled) with the splash screen
     local initial_buf = vim.api.nvim_get_current_buf()
-    vim.cmd('enew')
+    require('splash').show()
     vim.api.nvim_buf_delete(initial_buf, { force = true })
-
-    -- Open vertical buffers list after events propagate
-    vim.schedule(function()
-      vim.cmd('BuffersShow')
-      vim.cmd('wincmd l')
-    end)
   end,
 })
