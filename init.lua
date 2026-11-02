@@ -234,7 +234,19 @@ vim.keymap.set("n", "<leader>c", function()
     vim.cmd('CcClose')
     return
   end
-  vim.cmd('bp')
+  -- Switch to the most recently focused other buffer, or the splash if none
+  local next_buf
+  for _, buf in ipairs(require('buffers').recent()) do
+    if buf ~= bufnr then
+      next_buf = buf
+      break
+    end
+  end
+  if next_buf then
+    vim.api.nvim_set_current_buf(next_buf)
+  else
+    require('splash').show()
+  end
   vim.api.nvim_buf_delete(bufnr, { force = true })
 end, { desc = "Close buffer" })
 

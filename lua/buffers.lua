@@ -1107,6 +1107,23 @@ function M.focus_next()
   render()
 end
 
+-- Listed buffers, most recently focused first, then any never focused.
+-- focus_order is only pruned while the list window is open, so filter here.
+---@return number[]
+function M.recent()
+  local result = {}
+  local seen = {}
+  local function add(bufnr)
+    if not seen[bufnr] and vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buflisted then
+      seen[bufnr] = true
+      table.insert(result, bufnr)
+    end
+  end
+  for _, bufnr in ipairs(state.focus_order) do add(bufnr) end
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do add(bufnr) end
+  return result
+end
+
 ---@param config BuffersConfig|nil
 function M.setup(config)
   -- Merge config
