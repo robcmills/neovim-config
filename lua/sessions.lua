@@ -119,9 +119,10 @@ function M.restore(snap)
     end
   end
 
-  -- Show the first file only if the current window holds a listed buffer,
-  -- so we never load a file into the buffers sidebar or a floating window.
-  if first and vim.bo.buflisted then
+  -- Show the first file only if the current window holds a listed buffer or
+  -- the splash, so we never load a file into the buffers sidebar or a
+  -- floating window.
+  if first and (vim.bo.buflisted or vim.bo.filetype == 'splash') then
     vim.cmd.edit(vim.fn.fnameescape(first))
   end
   if vim.fn.exists(':BuffersShow') == 2 then

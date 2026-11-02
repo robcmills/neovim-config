@@ -563,6 +563,37 @@ local function list_win()
   return state.win
 end
 
+-- A window for showing a listed buffer: the current one or another showing a
+-- listed buffer or the splash screen, else a new split opposite the list.
+-- Skips unlisted panes such as the list itself, NvimTree, and cc prompts.
+---@param side string|nil side of the buffers list, defaults to config.side
+---@return number
+local function content_win(side)
+  local function is_content(win)
+    local buf = vim.api.nvim_win_get_buf(win)
+    return vim.bo[buf].buflisted or vim.bo[buf].filetype == "splash"
+  end
+  local current_win = vim.api.nvim_get_current_win()
+  if vim.api.nvim_win_get_config(current_win).relative == "" and is_content(current_win) then
+    return current_win
+  end
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.api.nvim_win_get_config(win).relative == "" and is_content(win) then
+      return win
+    end
+  end
+  if (side or state.config.side) == "right" then
+    vim.cmd("leftabove vsplit")
+  else
+    vim.cmd("rightbelow vsplit")
+  end
+  local win = vim.api.nvim_get_current_win()
+  if list_win() then
+    vim.api.nvim_win_set_width(state.win, get_effective_width())
+  end
+  return win
+end
+
 -- Put the buffers window cursor on `bufnr`'s row
 local function move_cursor_to_buffer(bufnr)
   if not list_win() then
@@ -803,35 +834,8 @@ local function create_window(position)
             state.win = nil
             vim.api.nvim_set_current_buf(target_bufnr)
           else
-            -- For split windows, find another window and switch to target buffer
-            -- Skip windows showing unlisted buffers (e.g. companion panes, NvimTree)
-            local current_win = vim.api.nvim_get_current_win()
-            local wins = vim.api.nvim_list_wins()
-            local target_win = nil
-            for _, win in ipairs(wins) do
-              if win ~= current_win and vim.api.nvim_win_is_valid(win)
-                 and vim.bo[vim.api.nvim_win_get_buf(win)].buflisted then
-                target_win = win
-                break
-              end
-            end
-            if target_win then
-              vim.api.nvim_win_set_buf(target_win, target_bufnr)
-              vim.api.nvim_set_current_win(target_win)
-            else
-              -- No suitable window found (main window was closed) — create a new split
-              -- Place new window opposite to the buffers list side
-              if position == "right" then
-                vim.cmd("leftabove vsplit")
-              else
-                vim.cmd("rightbelow vsplit")
-              end
-              vim.api.nvim_set_current_buf(target_bufnr)
-              -- Restore buffers window width
-              if list_win() then
-                vim.api.nvim_win_set_width(state.win, get_effective_width())
-              end
-            end
+            vim.api.nvim_set_current_win(content_win(position))
+            vim.api.nvim_set_current_buf(target_bufnr)
           end
         end
       end,
@@ -949,32 +953,8 @@ end
 -- it there. Otherwise, find another window with a listed buffer and swap
 -- there; create a split if none exists.
 local function switch_to_buffer(target_bufnr)
-  local current_win = vim.api.nvim_get_current_win()
-  local current_buf = vim.api.nvim_win_get_buf(current_win)
-
-  if vim.bo[current_buf].buflisted then
-    vim.api.nvim_set_current_buf(target_bufnr)
-    return
-  end
-
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    if win ~= current_win and vim.api.nvim_win_is_valid(win)
-       and vim.bo[vim.api.nvim_win_get_buf(win)].buflisted then
-      vim.api.nvim_win_set_buf(win, target_bufnr)
-      vim.api.nvim_set_current_win(win)
-      return
-    end
-  end
-
-  if state.config.side == "right" then
-    vim.cmd("leftabove vsplit")
-  else
-    vim.cmd("rightbelow vsplit")
-  end
+  vim.api.nvim_set_current_win(content_win())
   vim.api.nvim_set_current_buf(target_bufnr)
-  if list_win() then
-    vim.api.nvim_win_set_width(state.win, get_effective_width())
-  end
 end
 
 function M.next()
@@ -1123,6 +1103,8 @@ function M.recent()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do add(bufnr) end
   return result
 end
+
+M.content_win = content_win
 
 ---@param config BuffersConfig|nil
 function M.setup(config)

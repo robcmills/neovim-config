@@ -227,26 +227,50 @@ vim.keymap.set("n", "<leader>C", function()
   end
 end, { desc = "Close all buffers" })
 
-vim.keymap.set("n", "<leader>c", function()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local cc = package.loaded['cc']
-  if cc and cc.find_instance(bufnr) then
-    vim.cmd('CcClose')
-    return
-  end
-  -- Switch to the most recently focused other buffer, or the splash if none
+-- Show the most recently focused listed buffer other than `exclude`, or the
+-- splash if there is none, in the main window (never the buffers sidebar).
+local function show_recent_or_splash(exclude)
+  local buffers = require('buffers')
   local next_buf
-  for _, buf in ipairs(require('buffers').recent()) do
-    if buf ~= bufnr then
+  for _, buf in ipairs(buffers.recent()) do
+    if buf ~= exclude then
       next_buf = buf
       break
     end
   end
+  vim.api.nvim_set_current_win(buffers.content_win())
+  local prev_buf = vim.api.nvim_get_current_buf()
   if next_buf then
     vim.api.nvim_set_current_buf(next_buf)
   else
     require('splash').show()
   end
+  -- Drop the empty [No Name] buffer Neovim leaves when the last window's
+  -- buffer is deleted
+  if prev_buf ~= exclude and vim.api.nvim_buf_is_valid(prev_buf)
+      and vim.api.nvim_buf_get_name(prev_buf) == '' and vim.bo[prev_buf].buftype == ''
+      and not vim.bo[prev_buf].modified and vim.fn.bufwinid(prev_buf) == -1 then
+    vim.api.nvim_buf_delete(prev_buf, { force = true })
+  end
+end
+
+vim.keymap.set("n", "<leader>c", function()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local cc = package.loaded['cc']
+  if cc and cc.find_instance(bufnr) then
+    vim.cmd('CcClose')
+    -- CcClose closes the session's windows; if no file is left showing,
+    -- fill the main window
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      local buf = vim.api.nvim_win_get_buf(win)
+      if vim.bo[buf].buflisted and vim.api.nvim_buf_get_name(buf) ~= '' then
+        return
+      end
+    end
+    show_recent_or_splash()
+    return
+  end
+  show_recent_or_splash(bufnr)
   vim.api.nvim_buf_delete(bufnr, { force = true })
 end, { desc = "Close buffer" })
 
