@@ -154,9 +154,6 @@ local function enable_server(name)
   end
 end
 
--- vim.lsp.config.eslint = {}
-enable_server('eslint')
-
 -- vim.lsp.config.jsonls = {}
 enable_server('jsonls')
 
