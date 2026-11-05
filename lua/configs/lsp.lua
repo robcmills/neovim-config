@@ -241,6 +241,47 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
+-- TypeScript 7 ships no lib/tsserver.js, so typescript-language-server can't
+-- run it. Roots on TS 7 get its native server (`tsc --lsp --stdio`, the
+-- lspconfig `tsgo` config) instead of ts_ls; each root gets exactly one.
+local native_tsc_cache = {}
+local function native_tsc(root)
+  if native_tsc_cache[root] ~= nil then
+    return native_tsc_cache[root] or nil
+  end
+  local found = false
+  local dir = root
+  while dir do
+    local ts_dir = dir .. '/node_modules/typescript'
+    local ok, pkg = pcall(function()
+      return vim.json.decode(table.concat(vim.fn.readfile(ts_dir .. '/package.json'), '\n'))
+    end)
+    if ok and type(pkg) == 'table' then
+      local major = tonumber(tostring(pkg.version or ''):match('^(%d+)')) or 0
+      if major >= 7 or not vim.uv.fs_stat(ts_dir .. '/lib/tsserver.js') then
+        local shim = dir .. '/node_modules/.bin/tsc'
+        found = vim.fn.executable(shim) == 1 and shim or ts_dir .. '/bin/tsc'
+      end
+      break
+    end
+    local parent = vim.fs.dirname(dir)
+    dir = parent ~= dir and parent or nil
+  end
+  native_tsc_cache[root] = found
+  return found or nil
+end
+
+local ts_root_dir = vim.lsp.config.ts_ls.root_dir
+local function ts_root_dir_where(wants_native)
+  return function(bufnr, on_dir)
+    ts_root_dir(bufnr, function(root)
+      if (native_tsc(root) ~= nil) == wants_native then
+        on_dir(root)
+      end
+    end)
+  end
+end
+
 vim.lsp.config.ts_ls = {
   init_options = {
     preferences = {
@@ -248,9 +289,31 @@ vim.lsp.config.ts_ls = {
       quotePreference = 'single',
     },
   },
+  root_dir = ts_root_dir_where(false),
   on_attach = on_attach,
 }
 enable_server('ts_ls')
+
+vim.lsp.config.tsgo = {
+  cmd = function(dispatchers, config)
+    return vim.lsp.rpc.start(
+      { native_tsc(config.root_dir), '--lsp', '--stdio' },
+      dispatchers,
+      { cwd = config.root_dir }
+    )
+  end,
+  root_dir = ts_root_dir_where(true),
+  settings = {
+    typescript = {
+      preferences = {
+        importModuleSpecifier = 'non-relative',
+        quoteStyle = 'single',
+      },
+    },
+  },
+  on_attach = on_attach,
+}
+enable_server('tsgo')
 
 
 -- deno config
