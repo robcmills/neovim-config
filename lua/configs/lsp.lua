@@ -303,6 +303,13 @@ vim.lsp.config.tsgo = {
     )
   end,
   root_dir = ts_root_dir_where(true),
+  -- tsgo registers file watchers that reach up to $HOME. Neovim's watcher
+  -- then walks ~/Library, and a Lua error from a path that changes mid-walk
+  -- leaves a hit-enter prompt that blocks every RPC call (2026-11-13).
+  -- With dynamic registration off, tsgo watches files itself.
+  capabilities = {
+    workspace = { didChangeWatchedFiles = { dynamicRegistration = false } },
+  },
   settings = {
     typescript = {
       preferences = {
