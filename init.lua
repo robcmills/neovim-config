@@ -799,7 +799,8 @@ require('cc').setup({
         if rest:sub(1, 1) == ' ' then
           head, rest = head .. ' ', rest:sub(2)
         end
-        return head .. '%#CcStlTokens#' .. text .. '%#CcStl# ── ' .. rest
+        -- Dedicated group so recoloring the segment is a one-line hi command.
+        return head .. '%#JarvisWalkQueue#' .. text .. '%#CcStl# ── ' .. rest
       end)
       if ok and type(line) == 'string' then return line end
       return Stl._default_format(state)
