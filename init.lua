@@ -690,6 +690,13 @@ vim.opt.runtimepath:prepend(vim.fn.expand(vim.g.cc_nvim_path or '~/src/cc.nvim')
 -- Ghostty runs Hack Nerd Font Mono and this config already requires
 -- nvim-web-devicons, so Nerd Font glyphs are assumed throughout.
 vim.g.have_nerd_font = true
+-- Walk-queue segment color, picked 2026-11-13 (tokyonight blue). A
+-- :colorscheme reload clears user groups, so redefine on ColorScheme.
+local function walk_queue_hl()
+  vim.api.nvim_set_hl(0, 'JarvisWalkQueue', { fg = '#7aa2f7' })
+end
+walk_queue_hl()
+vim.api.nvim_create_autocmd('ColorScheme', { callback = walk_queue_hl })
 require('cc').setup({
   -- Highlight the cursor's screen row in the output window (off by default).
   cursorline = { output = true },
@@ -793,14 +800,21 @@ require('cc').setup({
             { window_width = math.max(1, state.window_width - used) })
         end
         local default = Stl._default_format(st)
-        local at = default:find('%=', 1, true)
-        if not at then return default end
-        local head, rest = default:sub(1, at + 1), default:sub(at + 2)
+        local seg = '%#JarvisWalkQueue#' .. text .. '%#CcStl# ── '
+        -- Right of the working spinner, left of the token count: insert
+        -- before the tokens segment when one renders.
+        local at = default:find('%#CcStlTokens#', 1, true)
+        if at then
+          return default:sub(1, at - 1) .. seg .. default:sub(at)
+        end
+        -- No token count yet: head of the right-aligned group.
+        local eq = default:find('%=', 1, true)
+        if not eq then return default end
+        local head, rest = default:sub(1, eq + 1), default:sub(eq + 2)
         if rest:sub(1, 1) == ' ' then
           head, rest = head .. ' ', rest:sub(2)
         end
-        -- Dedicated group so recoloring the segment is a one-line hi command.
-        return head .. '%#JarvisWalkQueue#' .. text .. '%#CcStl# ── ' .. rest
+        return head .. seg .. rest
       end)
       if ok and type(line) == 'string' then return line end
       return Stl._default_format(state)
