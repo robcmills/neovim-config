@@ -687,6 +687,9 @@ vim.keymap.set('n', '=', ':CcNew<cr>', { desc = 'New cc.nvim chat' })
 -- cc.nvim
 -- g:cc_nvim_path points a fresh Neovim at a cc.nvim worktree for testing.
 vim.opt.runtimepath:prepend(vim.fn.expand(vim.g.cc_nvim_path or '~/src/cc.nvim'))
+-- Ghostty runs Hack Nerd Font Mono and this config already requires
+-- nvim-web-devicons, so Nerd Font glyphs are assumed throughout.
+vim.g.have_nerd_font = true
 require('cc').setup({
   -- Highlight the cursor's screen row in the output window (off by default).
   cursorline = { output = true },
@@ -765,6 +768,42 @@ require('cc').setup({
       effort = 'high',   -- 'low' | 'medium' | 'high' | 'xhigh'
       sandbox = 'danger-full-access',
     },
+  },
+  -- Walk-queue count: during a brief walkthrough, `jarvis walk` pushes
+  -- g:jarvis_walk_queue = {session, count} over RPC (jarvis docs/walkthrough.md)
+  -- and this format prepends "󰚇 <count>" to the default statusline, only in
+  -- the session the walk flag names, hidden at zero. Leans on the custom-format
+  -- surface (cc.statusline._default_format) and its '%= ' anchor.
+  statusline = {
+    format = function(state)
+      local Stl = require('cc.statusline')
+      local ok, line = pcall(function()
+        local walk = vim.g.jarvis_walk_queue
+        local count = type(walk) == 'table' and tonumber(walk.count) or 0
+        if count < 1 or walk.session ~= state.session_id then
+          return Stl._default_format(state)
+        end
+        local icon = vim.g.have_nerd_font and '󰚇' or '✉'
+        local text = icon .. ' ' .. count
+        local st = state
+        if type(state.window_width) == 'number' and state.window_width > 0 then
+          -- Narrow the width the default fitter sees by the segment plus ' ── '.
+          local used = vim.fn.strdisplaywidth(text) + 4
+          st = vim.tbl_extend('force', {}, state,
+            { window_width = math.max(1, state.window_width - used) })
+        end
+        local default = Stl._default_format(st)
+        local at = default:find('%=', 1, true)
+        if not at then return default end
+        local head, rest = default:sub(1, at + 1), default:sub(at + 2)
+        if rest:sub(1, 1) == ' ' then
+          head, rest = head .. ' ', rest:sub(2)
+        end
+        return head .. '%#CcStlTokens#' .. text .. '%#CcStl# ── ' .. rest
+      end)
+      if ok and type(line) == 'string' then return line end
+      return Stl._default_format(state)
+    end,
   },
 })
 
