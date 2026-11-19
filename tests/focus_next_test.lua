@@ -71,21 +71,26 @@ test('pick_unread: level, then effective, then oldest', function()
   eq(priority.pick_unread(insts, false).outputBufnr, 5)
 end)
 
-test('display_state: delegating with unseen output shows unread', function()
+test('display_state: delegating or monitoring with unseen output shows unread', function()
   eq(priority.display_state({ state = 'delegating', unseen = true }), 'unread')
   eq(priority.display_state({ state = 'delegating', unseen = false }), 'delegating')
   eq(priority.display_state({ state = 'delegating' }), 'delegating')
+  eq(priority.display_state({ state = 'monitoring', unseen = true }), 'unread')
+  eq(priority.display_state({ state = 'monitoring', unseen = false }), 'monitoring')
   eq(priority.display_state({ state = 'working', unseen = true }), 'working')
-  eq(priority.display_state({ state = 'monitoring', unseen = true }), 'monitoring')
+  eq(priority.display_state({ state = 'waiting', unseen = true }), 'waiting')
 end)
 
-test('pick_unread: a delegating agent with unseen output counts as unread', function()
+test('pick_unread: a delegating or monitoring agent with unseen output counts as unread', function()
   local insts = {
     { outputBufnr = 1, state = 'delegating', unseen = true, cwd = '/tmp/fn/voice', lastModifiedAt = 50 },
     { outputBufnr = 2, state = 'delegating', unseen = false, cwd = '/tmp/fn/delivery', lastModifiedAt = 1 },
+    { outputBufnr = 3, state = 'monitoring', unseen = true, cwd = '/tmp/fn/voice', lastModifiedAt = 10 },
+    { outputBufnr = 4, state = 'monitoring', unseen = false, cwd = '/tmp/fn/voice', lastModifiedAt = 1 },
   }
-  eq(priority.pick_unread(insts, data).outputBufnr, 1)
-  eq(priority.pick_unread({ insts[2] }, data), nil)
+  eq(priority.pick_unread(insts, data).outputBufnr, 3)
+  eq(priority.pick_unread({ insts[1], insts[2] }, data).outputBufnr, 1)
+  eq(priority.pick_unread({ insts[2], insts[4] }, data), nil)
 end)
 
 -- The sidebar, end to end, against the fixture
@@ -166,6 +171,23 @@ test('sidebar: a delegating agent with unseen output shows the unread icon', fun
   inst.unseen = nil
   vim.api.nvim_exec_autocmds('User', { pattern = 'CcUnseenChanged', modeline = false })
   eq(rows()[3]:match('^%S+ (%S+)'), delegating_icon)
+end)
+
+test('sidebar: a monitoring agent with unseen output shows the unread icon', function()
+  local inst = fixture.by_name('sidebar-worker')
+  local function icon()
+    for _, line in ipairs(rows()) do
+      if line:find('sidebar-worker', 1, true) then return line:match('^%S+ (%S+)') end
+    end
+  end
+  local monitoring_icon = icon()
+  eq(monitoring_icon ~= nil and monitoring_icon ~= '󰇮', true)
+  inst.unseen = true
+  vim.api.nvim_exec_autocmds('User', { pattern = 'CcUnseenChanged', modeline = false })
+  eq(icon(), '󰇮')
+  inst.unseen = nil
+  vim.api.nvim_exec_autocmds('User', { pattern = 'CcUnseenChanged', modeline = false })
+  eq(icon(), monitoring_icon)
 end)
 
 local function hl_at(line, col)

@@ -164,12 +164,15 @@ function M.before(a, b)
   return nil
 end
 
--- The state to display for a cc.nvim instance snapshot. A `delegating` agent
--- with output not yet viewed (`unseen`, from list_instances) shows as unread:
--- its own report is waiting even though a child still works. The snapshot's
--- `state` stays `delegating` for cc.nvim, which forwards it to grandparents.
+-- The state to display for a cc.nvim instance snapshot. A `delegating` or
+-- `monitoring` agent with output not yet viewed (`unseen`, from
+-- list_instances) shows as unread: its report is waiting even though a child
+-- or a background task still runs. The snapshot's `state` stays as cc.nvim
+-- reports it, since cc.nvim forwards it to grandparents.
+local SHOW_UNSEEN = { delegating = true, monitoring = true }
+
 function M.display_state(inst)
-  if inst.state == "delegating" and inst.unseen == true then
+  if SHOW_UNSEEN[inst.state] and inst.unseen == true then
     return "unread"
   end
   return inst.state
