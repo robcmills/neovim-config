@@ -1,8 +1,8 @@
 -- Save and restore the set of open buffers, including live cc.nvim sessions.
 --
 -- :SaveSession writes ~/.config/nvim/sessions/<name>.lua, a script that calls
--- M.restore() with the listed file buffers and the id/provider of every
--- cc.nvim session. :LoadSession sources one of those files. Older mksession
+-- M.restore() with the listed file buffers and the id/provider/unread flag of
+-- every cc.nvim session. :LoadSession sources one of those files. Older mksession
 -- .vim files in the same directory are still listed and sourced as-is.
 --
 -- mksession is not used because cc.nvim output buffers are nofile scratch
@@ -25,7 +25,12 @@ local function snapshot()
       if vim.bo[bufnr].filetype == 'cc-output' then
         local inst = has_cc and cc.find_instance(bufnr) or nil
         if inst and inst.last_session_id and inst.provider and inst.provider.name then
-          table.insert(cc_sessions, { provider = inst.provider.name, id = inst.last_session_id })
+          local seen = require('cc.seen')
+          table.insert(cc_sessions, {
+            provider = inst.provider.name,
+            id = inst.last_session_id,
+            unread = seen.has_unseen_output(inst),
+          })
         else
           skipped = skipped + 1
         end
@@ -50,7 +55,7 @@ local function render(snap)
   table.insert(lines, '  },')
   table.insert(lines, '  cc = {')
   for _, s in ipairs(snap.cc) do
-    table.insert(lines, string.format('    { provider = %q, id = %q },', s.provider, s.id))
+    table.insert(lines, string.format('    { provider = %q, id = %q, unread = %s },', s.provider, s.id, tostring(s.unread == true)))
   end
   table.insert(lines, '  },')
   table.insert(lines, '})')
@@ -81,6 +86,14 @@ local function resume_hidden(cc, entry)
   local ok, err = pcall(cc.resume, entry.id, entry.provider)
   if not ok then
     vim.notify('sessions: failed to resume ' .. entry.id .. ': ' .. tostring(err), vim.log.levels.WARN)
+  elseif entry.unread then
+    -- cc.resume leaves the new instance's buffer current. Entering it counted
+    -- as a view, so flag it unread afterwards. When the resume guard defers
+    -- the start to a prompt, no instance exists yet and the flag is dropped.
+    local inst = cc.find_instance(vim.api.nvim_get_current_buf())
+    if inst and inst.last_session_id == entry.id then
+      require('cc.seen').mark_unread(inst)
+    end
   end
   if vim.api.nvim_tabpage_is_valid(tab) then
     vim.api.nvim_set_current_tabpage(tab)
