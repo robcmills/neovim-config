@@ -779,15 +779,24 @@ require('cc').setup({
   -- Walk-queue count: during a brief walkthrough, `jarvis walk` pushes
   -- g:jarvis_walk_queue = {session, count} over RPC (jarvis docs/walkthrough.md)
   -- and this format prepends "󰚇 <count>" to the default statusline, only in
-  -- the session the walk flag names, hidden at zero. Leans on the custom-format
+  -- the session the walk flag names, hidden at zero. The report hold (jarvis
+  -- docs/report-hold.md) pushes g:jarvis_hold_queue = {[session_id] = count};
+  -- a session's walk and hold counts add up. Leans on the custom-format
   -- surface (cc.statusline._default_format) and its '%= ' anchor.
   statusline = {
     format = function(state)
       local Stl = require('cc.statusline')
       local ok, line = pcall(function()
         local walk = vim.g.jarvis_walk_queue
-        local count = type(walk) == 'table' and tonumber(walk.count) or 0
-        if count < 1 or walk.session ~= state.session_id then
+        local count = 0
+        if type(walk) == 'table' and walk.session == state.session_id then
+          count = tonumber(walk.count) or 0
+        end
+        local hold = vim.g.jarvis_hold_queue
+        if type(hold) == 'table' and state.session_id then
+          count = count + (tonumber(hold[state.session_id]) or 0)
+        end
+        if count < 1 then
           return Stl._default_format(state)
         end
         local icon = vim.g.have_nerd_font and '󰚇' or '✉'
