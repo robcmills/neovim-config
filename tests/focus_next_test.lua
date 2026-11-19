@@ -71,6 +71,23 @@ test('pick_unread: level, then effective, then oldest', function()
   eq(priority.pick_unread(insts, false).outputBufnr, 5)
 end)
 
+test('display_state: delegating with unseen output shows unread', function()
+  eq(priority.display_state({ state = 'delegating', unseen = true }), 'unread')
+  eq(priority.display_state({ state = 'delegating', unseen = false }), 'delegating')
+  eq(priority.display_state({ state = 'delegating' }), 'delegating')
+  eq(priority.display_state({ state = 'working', unseen = true }), 'working')
+  eq(priority.display_state({ state = 'monitoring', unseen = true }), 'monitoring')
+end)
+
+test('pick_unread: a delegating agent with unseen output counts as unread', function()
+  local insts = {
+    { outputBufnr = 1, state = 'delegating', unseen = true, cwd = '/tmp/fn/voice', lastModifiedAt = 50 },
+    { outputBufnr = 2, state = 'delegating', unseen = false, cwd = '/tmp/fn/delivery', lastModifiedAt = 1 },
+  }
+  eq(priority.pick_unread(insts, data).outputBufnr, 1)
+  eq(priority.pick_unread({ insts[2] }, data), nil)
+end)
+
 -- The sidebar, end to end, against the fixture
 local buffers = require('buffers')
 buffers.setup({
@@ -135,6 +152,20 @@ test('sidebar: agent rows carry a colored one-cell status icon, no devicon, no n
   local buf = vim.fn.bufnr('VerticalBuffersList')
   local marks = vim.api.nvim_buf_get_extmarks(buf, -1, { 0, 2 }, { 0, 2 }, { details = true })
   eq(vim.tbl_contains(vim.tbl_map(function(m) return m[4].hl_group end, marks), 'BuffersStatus_working'), true)
+end)
+
+test('sidebar: a delegating agent with unseen output shows the unread icon', function()
+  local inst = fixture.by_name('a-very-long')
+  local delegating_icon = rows()[3]:match('^%S+ (%S+)')
+  eq(delegating_icon ~= '󰇮', true)
+  inst.unseen = true
+  vim.api.nvim_exec_autocmds('User', { pattern = 'CcUnseenChanged', modeline = false })
+  eq(rows()[3]:match('^%S+ (%S+)'), '󰇮')
+  local marks = vim.api.nvim_buf_get_extmarks(vim.fn.bufnr('VerticalBuffersList'), -1, { 2, 2 }, { 2, 2 }, { details = true })
+  eq(vim.tbl_contains(vim.tbl_map(function(m) return m[4].hl_group end, marks), 'BuffersStatus_unread'), true)
+  inst.unseen = nil
+  vim.api.nvim_exec_autocmds('User', { pattern = 'CcUnseenChanged', modeline = false })
+  eq(rows()[3]:match('^%S+ (%S+)'), delegating_icon)
 end)
 
 local function hl_at(line, col)

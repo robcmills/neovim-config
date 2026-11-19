@@ -460,9 +460,10 @@ local function build_layout()
     local name = get_buffer_name(bufnr, buffers)
     local icon, icon_hl
     if agents[bufnr] then
-      local status = AGENT_STATUS_ICONS[agents[bufnr].state]
+      local agent_state = priority.display_state(agents[bufnr])
+      local status = AGENT_STATUS_ICONS[agent_state]
       if status then
-        icon, icon_hl = status.icon, status_hl(agents[bufnr].state)
+        icon, icon_hl = status.icon, status_hl(agent_state)
       else
         icon = ""
       end
@@ -1300,10 +1301,12 @@ function M.setup(config)
 
   -- Re-render when a cc.nvim agent changes state, and refetch priorities (a
   -- new session may be tagged). Every render reads all agent states fresh,
-  -- so any render also corrects a missed event.
+  -- so any render also corrects a missed event. CcUnseenChanged covers a
+  -- delegating agent whose unseen output changes without a state change
+  -- (see priority.display_state).
   vim.api.nvim_create_autocmd("User", {
     group = group,
-    pattern = "CcStateChanged",
+    pattern = { "CcStateChanged", "CcUnseenChanged" },
     callback = function()
       if list_win() then
         render()

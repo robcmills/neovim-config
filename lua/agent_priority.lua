@@ -164,6 +164,17 @@ function M.before(a, b)
   return nil
 end
 
+-- The state to display for a cc.nvim instance snapshot. A `delegating` agent
+-- with output not yet viewed (`unseen`, from list_instances) shows as unread:
+-- its own report is waiting even though a child still works. The snapshot's
+-- `state` stays `delegating` for cc.nvim, which forwards it to grandparents.
+function M.display_state(inst)
+  if inst.state == "delegating" and inst.unseen == true then
+    return "unread"
+  end
+  return inst.state
+end
+
 -- The unread instance to focus next: lowest level, then effective, then unread longest
 -- (oldest lastModifiedAt), then lowest output bufnr. nil if none is unread.
 function M.pick_unread(instances, data)
@@ -172,7 +183,7 @@ function M.pick_unread(instances, data)
   end
   local best, best_key
   for _, inst in ipairs(instances or {}) do
-    if inst.state == "unread" then
+    if M.display_state(inst) == "unread" then
       local level, effective = M.resolve(data, inst.sessionId, inst.cwd)
       local modified = type(inst.lastModifiedAt) == "number" and inst.lastModifiedAt or math.huge
       local key = M.key(level, effective)
