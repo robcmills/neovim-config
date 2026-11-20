@@ -2,10 +2,12 @@
 -- permission float (same title and body), plus which agent asks, how long it
 -- has waited, and the agent's last message. Keys call `actions[key]()`.
 -- Leaving the float (WinLeave) only closes it, like `g`: nothing answers.
+local layout = require('permission_queue.layout')
+
 local M = {}
 
 local KEYS = { 'a', 'd', 's', 'o', 'g', 'q', '<Esc>' }
-local FOOTER = ' [a]llow  [d]eny  [s]kip  [o]pen agent  [g]o elsewhere  [q]uit '
+local FOOTER = ' [a]llow [d]eny [s]kip [o]pen agent [g]o elsewhere [q]uit '
 
 local state = { win = nil, buf = nil }
 
@@ -39,6 +41,7 @@ function M.show(item, pos, total, actions)
   if body[1] == '(no input)' and type(item.input.command) == 'string' then
     body = vim.split(item.input.command, '\n', { plain = true })
   end
+  local body_row = #lines
   vim.list_extend(lines, body)
   vim.list_extend(lines, { '', '── ' .. item.name .. '\'s last message ──', '(loading…)' })
 
@@ -46,20 +49,22 @@ function M.show(item, pos, total, actions)
   vim.bo[buf].bufhidden = 'wipe'
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].modifiable = false
-  local width = math.min(120, math.max(60, math.floor(vim.o.columns * 0.8)))
-  local height = math.max(8, math.min(#lines + 12, math.floor(vim.o.lines * 0.75)))
-  local where = item.project ~= '' and (' (' .. item.project .. ')') or ''
-  local title = (' Permission %d of %d waiting · %s%s · %s%s '):format(pos, total, item.name,
-    where, age(item.opened_at), item.deferred and ' · deferred' or '')
+  local lang = item.tool_name == 'Bash' and 'bash'
+    or (item.tool_name == 'Edit' or item.tool_name == 'MultiEdit' or item.tool_name == 'Write') and 'diff'
+  if lang then layout.highlight(buf, body_row, body, lang) end
+  local width = math.min(120, math.max(40, math.floor(vim.o.columns * 0.8)) )
+  width = math.min(width, vim.o.columns - 4)
+  local title = layout.title(('Permission %d of %d waiting'):format(pos, total), item.name, item.project,
+    ' · ' .. age(item.opened_at) .. (item.deferred and ' · deferred' or ''), width)
   local win = vim.api.nvim_open_win(buf, true, {
-    relative = 'editor', width = width, height = height, style = 'minimal', border = 'rounded',
-    row = math.max(0, math.floor((vim.o.lines - height) / 2) - 1),
-    col = math.floor((vim.o.columns - width) / 2),
+    relative = 'editor', width = width, height = 4, style = 'minimal', border = 'rounded',
+    row = 0, col = math.floor((vim.o.columns - width) / 2),
     title = { { title, 'CcPermission' } }, title_pos = 'center',
     footer = FOOTER, footer_pos = 'center',
   })
   vim.wo[win].wrap = true
   state.win, state.buf = win, buf
+  layout.fit(win, buf, FOOTER)
   -- Opened from the Jarvis prompt mid-typing (voice runs the command over
   -- RPC in any mode): the keys below are normal-mode maps. The origin
   -- already recorded insert mode, and restoring it resumes typing.
@@ -83,6 +88,7 @@ function M.set_message(buf, message_lines)
   vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, -2, -1, false, message_lines)
   vim.bo[buf].modifiable = false
+  if state.win then layout.fit(state.win, buf, FOOTER) end
 end
 
 return M
