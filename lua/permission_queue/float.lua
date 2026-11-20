@@ -60,6 +60,10 @@ function M.show(item, pos, total, actions)
   })
   vim.wo[win].wrap = true
   state.win, state.buf = win, buf
+  -- Opened from the Jarvis prompt mid-typing (voice runs the command over
+  -- RPC in any mode): the keys below are normal-mode maps. The origin
+  -- already recorded insert mode, and restoring it resumes typing.
+  vim.cmd('stopinsert')
 
   for _, key in ipairs(KEYS) do
     local action = actions[key == '<Esc>' and 'q' or key]

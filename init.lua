@@ -758,6 +758,10 @@ require('cc').setup({
     {
       after = (vim.g.cc_permission_timeouts or {})[2] or 900,
       callback = function(event)
+        -- An auto-mode block blocks nothing (the agent already got the
+        -- denial); with floats only over their own agent Rob may not have
+        -- seen it, so leave it queued rather than dismissing it.
+        if event.kind == 'denial' then return end
         if event.defer and event.defer('Deferred, not denied: Rob has not answered this prompt in 17 minutes, so it is queued for him (:PermissionPrompts). Continue other work; if nothing else can move, end your turn with one line saying exactly what you need approved. When he approves, you will get a message: retry the exact same call then and it runs once without a prompt. If he declines, you will be told.') then
           return
         end
