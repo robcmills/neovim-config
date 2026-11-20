@@ -694,6 +694,8 @@ vim.g.have_nerd_font = true
 -- :colorscheme reload clears user groups, so redefine on ColorScheme.
 local function walk_queue_hl()
   vim.api.nvim_set_hl(0, 'JarvisWalkQueue', { fg = '#7aa2f7' })
+  -- Permission-queue count (tokyonight orange): prompts waiting on Rob.
+  vim.api.nvim_set_hl(0, 'JarvisPermissionQueue', { fg = '#ff9e64', bold = true })
 end
 walk_queue_hl()
 vim.api.nvim_create_autocmd('ColorScheme', { callback = walk_queue_hl })
@@ -739,9 +741,15 @@ require('cc').setup({
       vim.notify(message, vim.log.levels.WARN, { title = 'cc.nvim permission requested' })
     end
   end,
+  -- A float opens on its own only over the agent it belongs to; any other
+  -- prompt waits for :PermissionPrompts ("permission prompts") or a visit.
+  permission_float = 'visible',
   -- Unanswered prompts: after 2 minutes, Remote Control forwards the prompt
-  -- to the Claude phone app as a push; 15 minutes later it is denied so the
-  -- agent moves on. Override for testing: nvim --cmd 'let g:cc_permission_timeouts = [10, 20]'
+  -- to the Claude phone app as a push. 15 minutes later it is deferred, not
+  -- denied: the agent moves on, the prompt stays in :PermissionPrompts, and
+  -- approving it there lets the agent's retry through once. Codex prompts
+  -- can't defer and are denied. Override for testing:
+  -- nvim --cmd 'let g:cc_permission_timeouts = [10, 20]'
   permission_timeouts = {
     {
       after = (vim.g.cc_permission_timeouts or {})[1] or 120,
@@ -750,15 +758,23 @@ require('cc').setup({
     {
       after = (vim.g.cc_permission_timeouts or {})[2] or 900,
       callback = function(event)
+        if event.defer and event.defer('Deferred, not denied: Rob has not answered this prompt in 17 minutes, so it is queued for him (:PermissionPrompts). Continue other work; if nothing else can move, end your turn with one line saying exactly what you need approved. When he approves, you will get a message: retry the exact same call then and it runs once without a prompt. If he declines, you will be told.') then
+          return
+        end
         event.resolve('deny', 'Approval timeout: Rob did not answer in 17 minutes. Remote Control stays on, so he can still reply from his phone. Work around it safely or continue other work; if nothing else can move, end your turn with one line saying exactly what you need approved, and retry when he replies. Report this denial.')
       end,
     },
   },
-  -- Turn Remote Control back off so the next prompt gets the 2-minute grace,
-  -- except after a timeout: then Rob may still answer from his phone, and the
-  -- agent shows `waiting` until he does (cc.nvim `blocked`).
+  -- Log every resolution, so an odd denial is one grep away
+  -- (~/.claude/permission-resolved.jsonl). Turn Remote Control back off so
+  -- the next prompt gets the 2-minute grace, except after a timeout that
+  -- denied: then Rob may still answer from his phone. A deferral needs no
+  -- phone: the CLI's prompt is gone and the queue holds it.
   on_permission_resolved = function(event)
-    if event.remote_enabled_by_stage and not event.timed_out then event.disable_remote() end
+    require('permission_queue.log').resolved(event)
+    if event.remote_enabled_by_stage and (event.deferred or not event.timed_out) then
+      event.disable_remote()
+    end
   end,
   prompt_placeholder = 'Enter prompt...',
   provider = 'claude', -- 'claude' | 'codex'
@@ -796,20 +812,27 @@ require('cc').setup({
         if type(hold) == 'table' and state.session_id then
           count = count + (tonumber(hold[state.session_id]) or 0)
         end
-        if count < 1 then
+        -- Permission prompts waiting in any Neovim (:PermissionPrompts),
+        -- counted only in the Neovim that listens (permission_queue.badge).
+        local prompts = tonumber(vim.g.permission_queue_count) or 0
+        if count < 1 and prompts < 1 then
           return Stl._default_format(state)
         end
-        local icon = vim.g.have_nerd_font and '󰚇' or '✉'
-        local text = icon .. ' ' .. count
+        local segs, used = {}, 0
+        local function add(hl, text)
+          segs[#segs + 1] = '%#' .. hl .. '#' .. text .. '%#CcStl# ── '
+          used = used + vim.fn.strdisplaywidth(text) + 4
+        end
+        if prompts > 0 then add('JarvisPermissionQueue', '⚑ ' .. prompts) end
+        if count > 0 then add('JarvisWalkQueue', (vim.g.have_nerd_font and '󰚇' or '✉') .. ' ' .. count) end
         local st = state
         if type(state.window_width) == 'number' and state.window_width > 0 then
-          -- Narrow the width the default fitter sees by the segment plus ' ── '.
-          local used = vim.fn.strdisplaywidth(text) + 4
+          -- Narrow the width the default fitter sees by the segments.
           st = vim.tbl_extend('force', {}, state,
             { window_width = math.max(1, state.window_width - used) })
         end
         local default = Stl._default_format(st)
-        local seg = '%#JarvisWalkQueue#' .. text .. '%#CcStl# ── '
+        local seg = table.concat(segs)
         -- Right of the working spinner, left of the token count: insert
         -- before the tokens segment when one renders.
         local at = default:find('%#CcStlTokens#', 1, true)
@@ -930,6 +953,13 @@ end
 
 -- Open `agents -i` popups reload when an agent's state changes.
 pcall(dofile, vim.fn.expand('~/.config/agents/src/picker-notify.lua'))
+
+-- :PermissionPrompts: every pending cc.nvim permission prompt, in any
+-- Neovim, answered from here. The Jarvis Neovim also keeps the statusline
+-- count (⚑ n) current.
+require('permission_queue').setup({
+  badge = vim.fn.getcwd() == vim.fn.expand('~/jarvis'),
+})
 
 -- Block idle sleep while any cc.nvim instance here is busy (jarvis docs/decisions.md, 2026-10-23).
 pcall(dofile, vim.fn.expand('~/jarvis/scripts/sleep-guard.lua'))
