@@ -132,6 +132,19 @@ test('target window: the current window with no cc output in the tab', function(
   vim.cmd('tabclose')
 end)
 
+test('target window: a focused float, e.g. a cc.nvim permission prompt', function()
+  cc_layout({ 'x' })
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { 'ask-rob "log in at https://pr-1.osdevenv.net"' })
+  local float = vim.api.nvim_open_win(buf, true, {
+    relative = 'editor', row = 1, col = 1, width = 60, height = 3, style = 'minimal',
+  })
+  eq(sl.target_window(), float)
+  eq(vim.tbl_map(function(t) return t.url end, sl.label(float)), { 'https://pr-1.osdevenv.net' })
+  sl.clear()
+  vim.api.nvim_win_close(float, true)
+end)
+
 local function marks(buf)
   local out = {}
   for _, m in ipairs(vim.api.nvim_buf_get_extmarks(buf, -1, 0, -1, { details = true })) do

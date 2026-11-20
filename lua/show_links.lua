@@ -91,11 +91,14 @@ function M.open(url)
   vim.fn.jobstart({ 'open', '-a', 'Brave Browser', url }, { detach = true })
 end
 
--- The cc.nvim output window in the current tab: the current instance's if
--- the cursor is in its output or prompt, else the first one. Falls back to
--- the current window.
+-- The window to label: the current one if it floats (a cc.nvim permission
+-- prompt, a peek), since it sits on top of everything else. Otherwise the
+-- cc.nvim output window in the current tab: the current instance's if the
+-- cursor is in its output or prompt, else the first one. Falls back to the
+-- current window.
 function M.target_window()
   local cur = vim.api.nvim_get_current_win()
+  if vim.api.nvim_win_get_config(cur).relative ~= '' then return cur end
   local ok, cc = pcall(require, 'cc')
   local insts = ok and type(cc.list_instances) == 'function' and cc.list_instances() or {}
   local outputs, mine = {}, nil
